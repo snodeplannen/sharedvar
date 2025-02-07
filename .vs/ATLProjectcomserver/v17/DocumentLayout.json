@@ -1,7 +1,15 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\csharp\\cursor_com_test\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{B4C7E620-C3A0-4D40-8186-A45154285BB4}|..\\comserver_testtool\\comserver_testtool.vcxproj|C:\\csharp\\cursor_com_test\\ATLProjectcomserver_i.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{B4C7E620-C3A0-4D40-8186-A45154285BB4}|..\\comserver_testtool\\comserver_testtool.vcxproj|solutionrelative:ATLProjectcomserver_i.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{B4C7E620-C3A0-4D40-8186-A45154285BB4}|..\\comserver_testtool\\comserver_testtool.vcxproj|C:\\csharp\\comserver_testtool\\comserver_testtool.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,7 +17,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -22,6 +30,31 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ATLProjectcomserver_i.h",
+              "DocumentMoniker": "C:\\csharp\\cursor_com_test\\ATLProjectcomserver_i.h",
+              "RelativeDocumentMoniker": "ATLProjectcomserver_i.h",
+              "ToolTip": "C:\\csharp\\cursor_com_test\\ATLProjectcomserver_i.h",
+              "RelativeToolTip": "ATLProjectcomserver_i.h",
+              "ViewState": "AgIAALQCAAAAAAAAAAAnwOACAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-02-07T21:48:04.175Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "comserver_testtool.cpp",
+              "DocumentMoniker": "C:\\csharp\\comserver_testtool\\comserver_testtool.cpp",
+              "RelativeDocumentMoniker": "..\\comserver_testtool\\comserver_testtool.cpp",
+              "ToolTip": "C:\\csharp\\comserver_testtool\\comserver_testtool.cpp",
+              "RelativeToolTip": "..\\comserver_testtool\\comserver_testtool.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-02-07T21:46:29.179Z"
             }
           ]
         }

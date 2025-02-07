@@ -4,7 +4,9 @@
 #include <atlbase.h>
 #include <atlcom.h>
 #include <vector>
+
 #include "resource.h"
+
 #include "ATLProjectcomserver_i.h"
 //#include "..\ATLProject-comserver\ATLProjectcomserver_i.c"
 
