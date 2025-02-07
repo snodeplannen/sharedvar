@@ -1,0 +1,89 @@
+// ATLProject-comserver.idl : IDL source for ATLProject-comserver
+import "oaidl.idl";
+import "ocidl.idl";
+
+// MathOperations interface
+[
+    object,
+        uuid(488e9f3c-299b-4fe1-8b25-a2b9c2a23506),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface IMathOperations : IDispatch
+{
+    HRESULT Add([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Subtract([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Multiply([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Divide([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+};
+
+// SharedValueCallback interface
+[
+    object,
+        uuid(e7639719-258c-46a3-b349-c3c96ac4b46c),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface ISharedValueCallback : IDispatch
+{
+    [id(1)] HRESULT OnValueChanged([in] VARIANT newValue);
+    [id(2)] HRESULT OnDateTimeChanged([in] BSTR newDateTime);
+};
+
+// SharedValue interface
+[
+    object,
+        uuid(aced7d5d-0559-4e35-a972-42d9871ee14a),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface ISharedValue : IDispatch
+{
+    HRESULT SetValue([in] VARIANT value);
+    HRESULT GetValue([out, retval] VARIANT* value);
+    HRESULT GetCurrentUTCDateTime([out, retval] BSTR* dateTime);
+    HRESULT GetCurrentUserLogin([out, retval] BSTR* login);
+    HRESULT LockSharedValue([in] LONG timeoutMs);
+    HRESULT Unlock();
+    HRESULT Subscribe([in] ISharedValueCallback* callback);
+    HRESULT Unsubscribe([in] ISharedValueCallback* callback);
+};
+
+// Library definition
+[
+    uuid(86be8df9-669e-4443-b1a0-bd69ea9e40cc),
+        version(1.0)
+]
+library ATLProjectcomserverLib
+{
+    importlib("stdole2.tlb");
+
+    [
+        uuid(b97b4532-1222-4229-a090-d625c1e9532b)
+    ]
+        coclass MathOperations
+    {
+        [default] interface IMathOperations;
+    };
+
+    [
+        uuid(6818dd57-f9e6-45be-aa20-ea4b5b658af3)
+    ]
+        coclass SharedValueCallback
+    {
+        [default] interface ISharedValueCallback;
+    };
+
+    [
+        uuid(71ef033e-e1b5-4985-bc7b-7687426bbdbb)
+    ]
+        coclass SharedValue
+    {
+        [default] interface ISharedValue;
+    };
+};
+
+import "shobjidl.idl";
