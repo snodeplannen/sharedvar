@@ -1,59 +1,26 @@
-# ATL COM Server Project
+# ATL COM Server & SharedValueV2 Project
 
-Dit project is een ATL COM server met de volgende componenten:
+Welkom bij dit ATL COM Server project. Deze repository bevat een klassiek **Windows C++ ATL/COM component** gecombineerd met een hypermoderne, thread-safe, **C++20 header-only core (SharedValueV2)**. 
 
-1. MathOperations - Een component voor basis rekenkundige operaties
-2. SharedValue - Een component voor het delen van waarden tussen clients
-3. SharedValueCallback - Een callback interface voor waardewijzigingen
+Oorspronkelijk was dit project ontwikkeld als leerschool voor het uitwisselen en opslaan van variabelen (`VARIANT`) tussen diverse client applicaties. Het is onlangs volledig geherstructureerd voor high-performance multithreading zonder vastlopers of deadlocks.
 
-## Vereisten
+## Functionaliteit
 
-- Visual Studio 2022 met ATL ondersteuning
-- Windows 10 SDK of nieuwer
-- Administrator rechten voor COM registratie
+Via deze COM Server DLL worden onafhankelijke functionaliteiten blootgesteld (te benaderen vanuit C++, C#, Python e.a.):
 
-## Bouwen
+1. **`MathOperations`** (`IMathOperations`): Een eenvoudige component voor stateless basis rekenkundige berekeningen (Add, Subtract, Multiply, Divide).
+2. **`SharedValue`** (`ISharedValue`): Het hoofdonderdeel van dit project. Een iteratie waarbij een in-process memory state veilig bekeken (`GetValue`), ontgrendeld geraadpleegd gepauzeerd (`LockSharedValue`) en weggescreven (`SetValue`) kan worden. Tevens ondersteunt deze objecten event-subscriptie voor observer notificaties.
+3. **`SharedValueCallback`** (`ISharedValueCallback`): C++ proxy-interface voor het observer-pattern, zodat externe scripts en integraties live te horen krijgen wanner er datetime- of inhoudelijk wijzigingen aan de state zijn gemaakt.
 
-1. Open `ATLProjectcomserver.sln` in Visual Studio
-2. Selecteer de gewenste configuratie (Debug/Release) en platform (x86/x64)
-3. Build de solution (F7)
+## Project Architectuur & Ontwerp
+Ben je geïnteresseerd in de interne robuustheid en de Design Patterns (zoals *Policy-Based Design* en *Monitor Pattern*)? 
+Vind een volledig overzicht in: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
-## Registreren
+## Compatibiliteit
+- Visual Studio 2022.
+- Ondersteunt x64 architectuur (en Win32 waar geconfigureerd).
+- Te registreren in het Windows Register via `regsvr32`.
 
-De COM server wordt automatisch geregistreerd tijdens het bouwen als Visual Studio met administrator rechten draait.
-Anders kun je de volgende commando's gebruiken (als administrator):
-
-```cmd
-regsvr32 ATLProjectcomserver.dll   # Voor registratie
-regsvr32 /u ATLProjectcomserver.dll # Voor de-registratie
-```
-
-## Gebruik
-
-De COM server biedt de volgende interfaces:
-
-### IMathOperations
-- Add(double a, double b) -> double
-- Subtract(double a, double b) -> double
-- Multiply(double a, double b) -> double
-- Divide(double a, double b) -> double
-
-### ISharedValue
-- SetValue(VARIANT value)
-- GetValue() -> VARIANT
-- GetCurrentUTCDateTime() -> BSTR
-- GetCurrentUserLogin() -> BSTR
-- Lock(long timeoutMs)
-- Unlock()
-- Subscribe(ISharedValueCallback* callback)
-- Unsubscribe(ISharedValueCallback* callback)
-
-### ISharedValueCallback
-- OnValueChanged(VARIANT newValue)
-- OnDateTimeChanged(BSTR newDateTime)
-
-## ProgIDs
-
-- ATLProjectcomserver.MathOperations
-- ATLProjectcomserver.SharedValue
-- ATLProjectcomserver.SharedValueCallback 
+## Hoe te Bouwen, Installeren en Testen
+Wil je dit project zelf compileren op een verse machine of lokaal de ingebouwde CMake Multithreaded Chaos tests (StressTest) draaien?
+Lees de installatie- en debug handleiding in: **[INSTALL.md](INSTALL.md)**.

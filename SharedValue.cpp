@@ -1,76 +1,58 @@
 // SharedValue.cpp
 #include "pch.h"
 #include "SharedValue.h"
-#include <Lmcons.h> // Voor Windows username functies
 
 STDMETHODIMP CSharedValue::SetValue(VARIANT value)
 {
-    if (WaitForSingleObject(m_lockEvent, 0) != WAIT_OBJECT_0)
-        return E_ACCESSDENIED;
+    CComVariant varValue;
+    HRESULT hr = varValue.Copy(&value);
+    if (FAILED(hr)) return hr;
 
-    HRESULT hr = S_OK;
-    {
-        CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
-        hr = m_value.Copy(&value);
-        if (SUCCEEDED(hr))
-            NotifyValueChanged();
-    }
-    return hr;
+    // Delgate to modern Core which handles thread safety and notification automatically
+    m_core.SetValue(varValue);
+    
+    return S_OK;
 }
 
 STDMETHODIMP CSharedValue::GetValue(VARIANT* value)
 {
     if (!value) return E_POINTER;
-
-    CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
-    return m_value.Copy(value);
+    
+    CComVariant varValue = m_core.GetValue();
+    return varValue.Detach(value);
 }
 
 STDMETHODIMP CSharedValue::GetCurrentUTCDateTime(BSTR* dateTime)
 {
     if (!dateTime) return E_POINTER;
-
-    auto now = std::chrono::system_clock::now();
-    auto utc_time = std::chrono::system_clock::to_time_t(now);
-    std::tm utc_tm;
-    gmtime_s(&utc_tm, &utc_time);
-
-    wchar_t buffer[64];
-    std::wcsftime(buffer, sizeof(buffer) / sizeof(wchar_t),
-        L"%Y-%m-%d %H:%M:%S", &utc_tm);
-
-    *dateTime = CComBSTR(buffer).Detach();
-    NotifyDateTimeChanged();
+    
+    std::wstring dt = m_core.GetCurrentUTCDateTime();
+    *dateTime = CComBSTR(dt.c_str()).Detach();
+    
     return S_OK;
 }
 
 STDMETHODIMP CSharedValue::GetCurrentUserLogin(BSTR* login)
 {
     if (!login) return E_POINTER;
-
-    wchar_t username[UNLEN + 1];
-    DWORD username_len = UNLEN + 1;
-    if (!GetUserNameW(username, &username_len))
-        return HRESULT_FROM_WIN32(GetLastError());
-
-    *login = CComBSTR(username).Detach();
+    
+    std::wstring dt = m_core.GetCurrentUserLogin();
+    *login = CComBSTR(dt.c_str()).Detach();
+    
     return S_OK;
 }
 
 STDMETHODIMP CSharedValue::LockSharedValue(LONG timeoutMs)
 {
-    if (WaitForSingleObject(m_lockEvent, timeoutMs) != WAIT_OBJECT_0)
-        return E_ACCESSDENIED;
-
-    InterlockedIncrement(&m_lockCount);
-    ResetEvent(m_lockEvent);
-    return S_OK;
+    if (m_core.LockSharedValueTimeout(timeoutMs)) {
+        return S_OK;
+    }
+    return E_ACCESSDENIED;
 }
 
 STDMETHODIMP CSharedValue::Unlock()
 {
-    if (InterlockedDecrement(&m_lockCount) == 0)
-        SetEvent(m_lockEvent);
+    m_core.Unlock();
     return S_OK;
 }
 
@@ -78,7 +60,7 @@ STDMETHODIMP CSharedValue::Subscribe(ISharedValueCallback* callback)
 {
     if (!callback) return E_POINTER;
 
-    CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
+    CComCritSecLock<CComAutoCriticalSection> lock(m_csCallbacks);
     m_callbacks.push_back(callback);
     return S_OK;
 }
@@ -87,7 +69,7 @@ STDMETHODIMP CSharedValue::Unsubscribe(ISharedValueCallback* callback)
 {
     if (!callback) return E_POINTER;
 
-    CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
+    CComCritSecLock<CComAutoCriticalSection> lock(m_csCallbacks);
     auto it = std::find_if(m_callbacks.begin(), m_callbacks.end(),
         [callback](const CComPtr<ISharedValueCallback>& ptr) {
             return ptr.p == callback;
@@ -99,24 +81,31 @@ STDMETHODIMP CSharedValue::Unsubscribe(ISharedValueCallback* callback)
     return S_OK;
 }
 
-void CSharedValue::NotifyValueChanged()
+void CSharedValue::OnValueChanged(const CComVariant& newValue)
 {
-    CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
-    for (auto& callback : m_callbacks)
+    std::vector<CComPtr<ISharedValueCallback>> callbacksCopy;
     {
-        callback->OnValueChanged(m_value);
+        // Thread-safe copy to avoid deadlocks!
+        CComCritSecLock<CComAutoCriticalSection> lock(m_csCallbacks);
+        callbacksCopy = m_callbacks;
+    }
+    
+    CComVariant valCopy = newValue;
+    for (auto& cb : callbacksCopy) {
+        cb->OnValueChanged(valCopy);
     }
 }
 
-void CSharedValue::NotifyDateTimeChanged()
+void CSharedValue::OnDateTimeChanged(const std::wstring& newDateTime)
 {
-    CComBSTR dateTime;
-    if (SUCCEEDED(GetCurrentUTCDateTime(&dateTime)))
+    std::vector<CComPtr<ISharedValueCallback>> callbacksCopy;
     {
-        CComCritSecLock<CComAutoCriticalSection> lock(m_cs);
-        for (auto& callback : m_callbacks)
-        {
-            callback->OnDateTimeChanged(dateTime);
-        }
+        CComCritSecLock<CComAutoCriticalSection> lock(m_csCallbacks);
+        callbacksCopy = m_callbacks;
+    }
+    
+    CComBSTR bstrDt(newDateTime.c_str());
+    for (auto& cb : callbacksCopy) {
+        cb->OnDateTimeChanged(bstrDt);
     }
 }

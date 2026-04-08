@@ -4,35 +4,33 @@
 
 #include <atlbase.h>
 #include <atlcom.h>
-#include <atlsync.h>
-#include <vector>
-#include <chrono>
-#include <format>
 #include "SharedValueCallback.h"
-//#include "SharedValue.h"
 #include "ATLProjectcomserver_i.h"
+
+#include "SharedValueV2/include/SharedValue.hpp"
+#include "SharedValueV2/include/LockPolicies.hpp"
+
 using namespace ATL;
 
 class ATL_NO_VTABLE CSharedValue :
     public CComObjectRootEx<CComMultiThreadModel>,
     public CComCoClass<CSharedValue, &CLSID_SharedValue>,
-    public IDispatchImpl<ISharedValue, &IID_ISharedValue>
+    public IDispatchImpl<ISharedValue, &IID_ISharedValue>,
+    public SharedValueV2::ISharedValueObserver<CComVariant>
 {
 public:
-    CSharedValue() : m_lockCount(0), m_lockEvent(NULL)
+    CSharedValue()
     {
+        // Subscribe to our own internal V2 core
+        m_core.Subscribe(this);
     }
 
     ~CSharedValue()
     {
-        if (m_lockEvent) {
-            CloseHandle(m_lockEvent);
-        }
+        m_core.Unsubscribe(this);
     }
 
     DECLARE_REGISTRY_RESOURCEID(IDR_SHAREDVALUE)
-
-    using CComObjectRootEx<CComMultiThreadModel>::Lock;
 
     BEGIN_COM_MAP(CSharedValue)
         COM_INTERFACE_ENTRY(ISharedValue)
@@ -43,16 +41,11 @@ public:
 
     HRESULT FinalConstruct()
     {
-        m_lockEvent = CreateEvent(NULL, TRUE, TRUE, L"Global\\SharedValueLock");
-        return m_lockEvent == NULL ? E_FAIL : S_OK;
+        return S_OK;
     }
 
     void FinalRelease()
     {
-        if (m_lockEvent) {
-            CloseHandle(m_lockEvent);
-            m_lockEvent = NULL;
-        }
     }
 
     // ISharedValue
@@ -65,15 +58,15 @@ public:
     STDMETHOD(Subscribe)(ISharedValueCallback* callback);
     STDMETHOD(Unsubscribe)(ISharedValueCallback* callback);
 
-private:
-    CComVariant m_value;
-    mutable CComAutoCriticalSection m_cs;
-    HANDLE m_lockEvent;
-    LONG m_lockCount;
-    std::vector<CComPtr<ISharedValueCallback>> m_callbacks;
+    // Callbacks from V2 Core
+    void OnValueChanged(const CComVariant& newValue) override;
+    void OnDateTimeChanged(const std::wstring& newDateTime) override;
 
-    void NotifyValueChanged();
-    void NotifyDateTimeChanged();
+private:
+    SharedValueV2::SharedValue<CComVariant, SharedValueV2::LocalMutexPolicy> m_core;
+    
+    mutable CComAutoCriticalSection m_csCallbacks;
+    std::vector<CComPtr<ISharedValueCallback>> m_callbacks;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(SharedValue), CSharedValue)
