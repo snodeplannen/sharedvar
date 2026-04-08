@@ -1,6 +1,6 @@
-// SharedValue.cpp
 #include "pch.h"
 #include "SharedValue.h"
+#include "dllmain.h"
 
 STDMETHODIMP CSharedValue::SetValue(VARIANT value)
 {
@@ -117,4 +117,14 @@ void CSharedValue::OnDateTimeChanged(const std::wstring& newDateTime)
     for (auto& cb : callbacksCopy) {
         cb->OnDateTimeChanged(bstrDt);
     }
+}
+STDMETHODIMP CSharedValue::ShutdownServer()
+{
+    // Forcefully remove the global DatasetProxy to release its ATL module lock count
+    m_core.SetValue(CComVariant());
+
+    // Remove the arbitrary lock we placed in _tWinMain
+    extern CATLProjectcomserverExeModule _AtlModule;
+    _AtlModule.Unlock();
+    return S_OK;
 }

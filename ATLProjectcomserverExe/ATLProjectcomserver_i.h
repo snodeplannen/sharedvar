@@ -669,6 +669,8 @@ EXTERN_C const IID IID_ISharedValue;
         virtual HRESULT STDMETHODCALLTYPE Unsubscribe( 
             /* [in] */ ISharedValueCallback *callback) = 0;
         
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE ShutdownServer( void) = 0;
+        
         virtual /* [id] */ HRESULT STDMETHODCALLTYPE RegisterEventCallback( 
             /* [in] */ IEventCallback *callback) = 0;
         
@@ -779,6 +781,10 @@ EXTERN_C const IID IID_ISharedValue;
             ISharedValue * This,
             /* [in] */ ISharedValueCallback *callback);
         
+        DECLSPEC_XFGVIRT(ISharedValue, ShutdownServer)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *ShutdownServer )( 
+            ISharedValue * This);
+        
         DECLSPEC_XFGVIRT(ISharedValue, RegisterEventCallback)
         /* [id] */ HRESULT ( STDMETHODCALLTYPE *RegisterEventCallback )( 
             ISharedValue * This,
@@ -848,6 +854,9 @@ EXTERN_C const IID IID_ISharedValue;
 
 #define ISharedValue_Unsubscribe(This,callback)	\
     ( (This)->lpVtbl -> Unsubscribe(This,callback) ) 
+
+#define ISharedValue_ShutdownServer(This)	\
+    ( (This)->lpVtbl -> ShutdownServer(This) ) 
 
 #define ISharedValue_RegisterEventCallback(This,callback)	\
     ( (This)->lpVtbl -> RegisterEventCallback(This,callback) ) 

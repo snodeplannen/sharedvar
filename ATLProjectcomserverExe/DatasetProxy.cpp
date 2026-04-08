@@ -87,12 +87,13 @@ STDMETHODIMP CDatasetProxy::FetchPageKeys(LONG startIndex, LONG limit, VARIANT* 
     COM_METHOD_BODY(CLSID_DatasetProxy, IID_IDatasetProxy,
         auto keyVec = m_store->FetchKeys(static_cast<size_t>(startIndex),
                                           static_cast<size_t>(limit));
-        CComSafeArray<BSTR> sa(static_cast<ULONG>(keyVec.size()));
+        CComSafeArray<VARIANT> sa(static_cast<ULONG>(keyVec.size()));
         for (LONG i = 0; i < static_cast<LONG>(keyVec.size()); ++i) {
-            sa.SetAt(i, CComBSTR(keyVec[i].c_str()).Detach());
+            CComVariant varKey(keyVec[i].c_str());
+            sa.SetAt(i, varKey);
         }
         CComVariant var;
-        var.vt = VT_ARRAY | VT_BSTR;
+        var.vt = VT_ARRAY | VT_VARIANT;
         var.parray = sa.Detach();
         var.Detach(keys)
     )

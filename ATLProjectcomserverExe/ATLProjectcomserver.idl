@@ -71,6 +71,7 @@ interface ISharedValue : IDispatch
     HRESULT Unlock();
     HRESULT Subscribe([in] ISharedValueCallback* callback);
     HRESULT Unsubscribe([in] ISharedValueCallback* callback);
+    [id(9)] HRESULT ShutdownServer();
     [id(10)] HRESULT RegisterEventCallback([in] IEventCallback* callback);
     [id(11)] HRESULT UnregisterEventCallback([in] IEventCallback* callback);
 };

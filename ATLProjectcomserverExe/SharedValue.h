@@ -124,6 +124,9 @@ public:
     STDMETHOD(Unlock)();
     STDMETHOD(Subscribe)(ISharedValueCallback* callback);
     STDMETHOD(Unsubscribe)(ISharedValueCallback* callback);
+    STDMETHOD(ShutdownServer)();
+    
+    // IEventCallback proxy
     STDMETHOD(RegisterEventCallback)(IEventCallback* callback);
     STDMETHOD(UnregisterEventCallback)(IEventCallback* callback);
 
