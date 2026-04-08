@@ -15,3 +15,13 @@
 /ATLProjectcomserver.*/
 .fake/
 SharedValueV2/build/
+# COM Auto-Generated Files (TypeLib Headers)
+*.tlh
+*.tli
+
+# Object Files
+*.obj
+
+# Temporary debugging scripts & logs
+test_*.vbs
+build.log
