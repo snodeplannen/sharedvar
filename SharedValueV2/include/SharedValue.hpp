@@ -2,6 +2,7 @@
 
 #include "Observers.hpp"
 #include "LockPolicies.hpp"
+#include "EventBus.hpp"
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -21,16 +22,14 @@ private:
     T m_value;
     mutable MutexPolicy m_mutex;
     std::vector<ISharedValueObserver<T>*> m_observers;
+    EventBus<MutexPolicy> m_eventBus;
 
     void notifyValueChanged(const T& val) {
-        // Safe notification: copy observers out of the lock to prevent deadlocks!
         std::vector<ISharedValueObserver<T>*> observersCopy;
         {
             std::lock_guard<MutexPolicy> lock(m_mutex);
             observersCopy = m_observers;
         }
-
-        // Notify outside the lock
         for (auto* obs : observersCopy) {
             obs->OnValueChanged(val);
         }
@@ -42,7 +41,6 @@ private:
             std::lock_guard<MutexPolicy> lock(m_mutex);
             observersCopy = m_observers;
         }
-
         for (auto* obs : observersCopy) {
             obs->OnDateTimeChanged(dt);
         }
@@ -57,10 +55,10 @@ public:
     void SetValue(const T& newValue) {
         {
             std::lock_guard<MutexPolicy> lock(m_mutex);
-            m_value = newValue; // copy within lock
+            m_value = newValue;
         }
-        // Notify outside lock
         notifyValueChanged(newValue);
+        m_eventBus.Emit(EventType::ValueSet);
     }
 
     T GetValue() const {
@@ -84,7 +82,6 @@ public:
         wss << std::put_time<wchar_t>(&utc_tm, L"%Y-%m-%d %H:%M:%S");
         std::wstring dt = wss.str();
 
-        // Notify outside the lock, preventing infinite recursion!
         notifyDateTimeChanged(dt);
 
         return dt;
@@ -101,30 +98,32 @@ public:
         return L"UnknownUser";
     }
 
-    // ---- EXPLICIT LOCK MANAGEMENT (If needed for atomic multi-operations) ----
+    // ---- EXPLICIT LOCK MANAGEMENT ----
     
-    // Returns true if explicit lock succeeded
     bool LockSharedValue() {
         m_mutex.lock();
+        m_eventBus.Emit(EventType::ValueLocked);
         return true;
     }
 
     bool LockSharedValueTimeout(unsigned long ms) {
-        // Specialization check for NamedSystemMutexPolicy
         if constexpr (std::is_same_v<MutexPolicy, NamedSystemMutexPolicy>) {
-            return m_mutex.try_lock_for((DWORD)ms);
+            bool result = m_mutex.try_lock_for((DWORD)ms);
+            if (result) m_eventBus.Emit(EventType::ValueLocked);
+            return result;
         } else {
-            // For std::mutex, we can't easily wait with timeout unless we use timed_mutex.
-            // For now, simple fallback:
-            return m_mutex.try_lock();
+            bool result = m_mutex.try_lock();
+            if (result) m_eventBus.Emit(EventType::ValueLocked);
+            return result;
         }
     }
 
     void Unlock() {
         m_mutex.unlock();
+        m_eventBus.Emit(EventType::ValueUnlocked);
     }
 
-    // ---- PUB/SUB ----
+    // ---- PUB/SUB (backward compatible) ----
 
     void Subscribe(ISharedValueObserver<T>* observer) {
         if (!observer) return;
@@ -142,6 +141,10 @@ public:
             m_observers.end()
         );
     }
+
+    // ---- EVENT BUS (new, rich events) ----
+
+    EventBus<MutexPolicy>& GetEventBus() { return m_eventBus; }
 };
 
 } // namespace SharedValueV2

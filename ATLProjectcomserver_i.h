@@ -66,11 +66,25 @@ typedef interface ISharedValueCallback ISharedValueCallback;
 #endif 	/* __ISharedValueCallback_FWD_DEFINED__ */
 
 
+#ifndef __IEventCallback_FWD_DEFINED__
+#define __IEventCallback_FWD_DEFINED__
+typedef interface IEventCallback IEventCallback;
+
+#endif 	/* __IEventCallback_FWD_DEFINED__ */
+
+
 #ifndef __ISharedValue_FWD_DEFINED__
 #define __ISharedValue_FWD_DEFINED__
 typedef interface ISharedValue ISharedValue;
 
 #endif 	/* __ISharedValue_FWD_DEFINED__ */
+
+
+#ifndef __IDatasetProxy_FWD_DEFINED__
+#define __IDatasetProxy_FWD_DEFINED__
+typedef interface IDatasetProxy IDatasetProxy;
+
+#endif 	/* __IDatasetProxy_FWD_DEFINED__ */
 
 
 #ifndef __MathOperations_FWD_DEFINED__
@@ -107,6 +121,18 @@ typedef struct SharedValue SharedValue;
 #endif /* __cplusplus */
 
 #endif 	/* __SharedValue_FWD_DEFINED__ */
+
+
+#ifndef __DatasetProxy_FWD_DEFINED__
+#define __DatasetProxy_FWD_DEFINED__
+
+#ifdef __cplusplus
+typedef class DatasetProxy DatasetProxy;
+#else
+typedef struct DatasetProxy DatasetProxy;
+#endif /* __cplusplus */
+
+#endif 	/* __DatasetProxy_FWD_DEFINED__ */
 
 
 /* header files for imported files */
@@ -455,6 +481,156 @@ EXTERN_C const IID IID_ISharedValueCallback;
 #endif 	/* __ISharedValueCallback_INTERFACE_DEFINED__ */
 
 
+#ifndef __IEventCallback_INTERFACE_DEFINED__
+#define __IEventCallback_INTERFACE_DEFINED__
+
+/* interface IEventCallback */
+/* [unique][nonextensible][dual][uuid][object] */ 
+
+
+EXTERN_C const IID IID_IEventCallback;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("a3f1d8e2-7c4b-4a9e-b5d6-1e2f3a4b5c6d")
+    IEventCallback : public IDispatch
+    {
+    public:
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE OnMutationEvent( 
+            /* [in] */ LONG eventType,
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR oldValue,
+            /* [in] */ BSTR newValue,
+            /* [in] */ BSTR source,
+            /* [in] */ BSTR timestamp,
+            /* [in] */ LONG sequenceId) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct IEventCallbackVtbl
+    {
+        BEGIN_INTERFACE
+        
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            IEventCallback * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            IEventCallback * This);
+        
+        DECLSPEC_XFGVIRT(IUnknown, Release)
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            IEventCallback * This);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetTypeInfoCount)
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfoCount )( 
+            IEventCallback * This,
+            /* [out] */ UINT *pctinfo);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetTypeInfo)
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfo )( 
+            IEventCallback * This,
+            /* [in] */ UINT iTInfo,
+            /* [in] */ LCID lcid,
+            /* [out] */ ITypeInfo **ppTInfo);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetIDsOfNames)
+        HRESULT ( STDMETHODCALLTYPE *GetIDsOfNames )( 
+            IEventCallback * This,
+            /* [in] */ REFIID riid,
+            /* [size_is][in] */ LPOLESTR *rgszNames,
+            /* [range][in] */ UINT cNames,
+            /* [in] */ LCID lcid,
+            /* [size_is][out] */ DISPID *rgDispId);
+        
+        DECLSPEC_XFGVIRT(IDispatch, Invoke)
+        /* [local] */ HRESULT ( STDMETHODCALLTYPE *Invoke )( 
+            IEventCallback * This,
+            /* [annotation][in] */ 
+            _In_  DISPID dispIdMember,
+            /* [annotation][in] */ 
+            _In_  REFIID riid,
+            /* [annotation][in] */ 
+            _In_  LCID lcid,
+            /* [annotation][in] */ 
+            _In_  WORD wFlags,
+            /* [annotation][out][in] */ 
+            _In_  DISPPARAMS *pDispParams,
+            /* [annotation][out] */ 
+            _Out_opt_  VARIANT *pVarResult,
+            /* [annotation][out] */ 
+            _Out_opt_  EXCEPINFO *pExcepInfo,
+            /* [annotation][out] */ 
+            _Out_opt_  UINT *puArgErr);
+        
+        DECLSPEC_XFGVIRT(IEventCallback, OnMutationEvent)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *OnMutationEvent )( 
+            IEventCallback * This,
+            /* [in] */ LONG eventType,
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR oldValue,
+            /* [in] */ BSTR newValue,
+            /* [in] */ BSTR source,
+            /* [in] */ BSTR timestamp,
+            /* [in] */ LONG sequenceId);
+        
+        END_INTERFACE
+    } IEventCallbackVtbl;
+
+    interface IEventCallback
+    {
+        CONST_VTBL struct IEventCallbackVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define IEventCallback_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define IEventCallback_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define IEventCallback_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define IEventCallback_GetTypeInfoCount(This,pctinfo)	\
+    ( (This)->lpVtbl -> GetTypeInfoCount(This,pctinfo) ) 
+
+#define IEventCallback_GetTypeInfo(This,iTInfo,lcid,ppTInfo)	\
+    ( (This)->lpVtbl -> GetTypeInfo(This,iTInfo,lcid,ppTInfo) ) 
+
+#define IEventCallback_GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)	\
+    ( (This)->lpVtbl -> GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId) ) 
+
+#define IEventCallback_Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)	\
+    ( (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr) ) 
+
+
+#define IEventCallback_OnMutationEvent(This,eventType,key,oldValue,newValue,source,timestamp,sequenceId)	\
+    ( (This)->lpVtbl -> OnMutationEvent(This,eventType,key,oldValue,newValue,source,timestamp,sequenceId) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __IEventCallback_INTERFACE_DEFINED__ */
+
+
 #ifndef __ISharedValue_INTERFACE_DEFINED__
 #define __ISharedValue_INTERFACE_DEFINED__
 
@@ -492,6 +668,12 @@ EXTERN_C const IID IID_ISharedValue;
         
         virtual HRESULT STDMETHODCALLTYPE Unsubscribe( 
             /* [in] */ ISharedValueCallback *callback) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE RegisterEventCallback( 
+            /* [in] */ IEventCallback *callback) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE UnregisterEventCallback( 
+            /* [in] */ IEventCallback *callback) = 0;
         
     };
     
@@ -597,6 +779,16 @@ EXTERN_C const IID IID_ISharedValue;
             ISharedValue * This,
             /* [in] */ ISharedValueCallback *callback);
         
+        DECLSPEC_XFGVIRT(ISharedValue, RegisterEventCallback)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *RegisterEventCallback )( 
+            ISharedValue * This,
+            /* [in] */ IEventCallback *callback);
+        
+        DECLSPEC_XFGVIRT(ISharedValue, UnregisterEventCallback)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *UnregisterEventCallback )( 
+            ISharedValue * This,
+            /* [in] */ IEventCallback *callback);
+        
         END_INTERFACE
     } ISharedValueVtbl;
 
@@ -657,6 +849,12 @@ EXTERN_C const IID IID_ISharedValue;
 #define ISharedValue_Unsubscribe(This,callback)	\
     ( (This)->lpVtbl -> Unsubscribe(This,callback) ) 
 
+#define ISharedValue_RegisterEventCallback(This,callback)	\
+    ( (This)->lpVtbl -> RegisterEventCallback(This,callback) ) 
+
+#define ISharedValue_UnregisterEventCallback(This,callback)	\
+    ( (This)->lpVtbl -> UnregisterEventCallback(This,callback) ) 
+
 #endif /* COBJMACROS */
 
 
@@ -666,6 +864,294 @@ EXTERN_C const IID IID_ISharedValue;
 
 
 #endif 	/* __ISharedValue_INTERFACE_DEFINED__ */
+
+
+#ifndef __IDatasetProxy_INTERFACE_DEFINED__
+#define __IDatasetProxy_INTERFACE_DEFINED__
+
+/* interface IDatasetProxy */
+/* [unique][nonextensible][dual][uuid][object] */ 
+
+
+EXTERN_C const IID IID_IDatasetProxy;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("d4e5f6a7-b8c9-4d0e-a1b2-c3d4e5f6a7b8")
+    IDatasetProxy : public IDispatch
+    {
+    public:
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE SetStorageMode( 
+            /* [in] */ LONG mode) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetStorageMode( 
+            /* [retval][out] */ LONG *mode) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE AddRow( 
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR value) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetRowData( 
+            /* [in] */ BSTR key,
+            /* [retval][out] */ BSTR *data) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE UpdateRow( 
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR value,
+            /* [retval][out] */ VARIANT_BOOL *success) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE RemoveRow( 
+            /* [in] */ BSTR key,
+            /* [retval][out] */ VARIANT_BOOL *success) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE Clear( void) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE GetRecordCount( 
+            /* [retval][out] */ LONG *count) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE HasKey( 
+            /* [in] */ BSTR key,
+            /* [retval][out] */ VARIANT_BOOL *exists) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FetchPageKeys( 
+            /* [in] */ LONG startIndex,
+            /* [in] */ LONG limit,
+            /* [retval][out] */ VARIANT *keys) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE FetchPageData( 
+            /* [in] */ LONG startIndex,
+            /* [in] */ LONG limit,
+            /* [retval][out] */ VARIANT *keysAndValues) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE RegisterEventCallback( 
+            /* [in] */ IEventCallback *callback) = 0;
+        
+        virtual /* [id] */ HRESULT STDMETHODCALLTYPE UnregisterEventCallback( 
+            /* [in] */ IEventCallback *callback) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct IDatasetProxyVtbl
+    {
+        BEGIN_INTERFACE
+        
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            IDatasetProxy * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            IDatasetProxy * This);
+        
+        DECLSPEC_XFGVIRT(IUnknown, Release)
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            IDatasetProxy * This);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetTypeInfoCount)
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfoCount )( 
+            IDatasetProxy * This,
+            /* [out] */ UINT *pctinfo);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetTypeInfo)
+        HRESULT ( STDMETHODCALLTYPE *GetTypeInfo )( 
+            IDatasetProxy * This,
+            /* [in] */ UINT iTInfo,
+            /* [in] */ LCID lcid,
+            /* [out] */ ITypeInfo **ppTInfo);
+        
+        DECLSPEC_XFGVIRT(IDispatch, GetIDsOfNames)
+        HRESULT ( STDMETHODCALLTYPE *GetIDsOfNames )( 
+            IDatasetProxy * This,
+            /* [in] */ REFIID riid,
+            /* [size_is][in] */ LPOLESTR *rgszNames,
+            /* [range][in] */ UINT cNames,
+            /* [in] */ LCID lcid,
+            /* [size_is][out] */ DISPID *rgDispId);
+        
+        DECLSPEC_XFGVIRT(IDispatch, Invoke)
+        /* [local] */ HRESULT ( STDMETHODCALLTYPE *Invoke )( 
+            IDatasetProxy * This,
+            /* [annotation][in] */ 
+            _In_  DISPID dispIdMember,
+            /* [annotation][in] */ 
+            _In_  REFIID riid,
+            /* [annotation][in] */ 
+            _In_  LCID lcid,
+            /* [annotation][in] */ 
+            _In_  WORD wFlags,
+            /* [annotation][out][in] */ 
+            _In_  DISPPARAMS *pDispParams,
+            /* [annotation][out] */ 
+            _Out_opt_  VARIANT *pVarResult,
+            /* [annotation][out] */ 
+            _Out_opt_  EXCEPINFO *pExcepInfo,
+            /* [annotation][out] */ 
+            _Out_opt_  UINT *puArgErr);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, SetStorageMode)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *SetStorageMode )( 
+            IDatasetProxy * This,
+            /* [in] */ LONG mode);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, GetStorageMode)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetStorageMode )( 
+            IDatasetProxy * This,
+            /* [retval][out] */ LONG *mode);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, AddRow)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *AddRow )( 
+            IDatasetProxy * This,
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR value);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, GetRowData)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetRowData )( 
+            IDatasetProxy * This,
+            /* [in] */ BSTR key,
+            /* [retval][out] */ BSTR *data);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, UpdateRow)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *UpdateRow )( 
+            IDatasetProxy * This,
+            /* [in] */ BSTR key,
+            /* [in] */ BSTR value,
+            /* [retval][out] */ VARIANT_BOOL *success);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, RemoveRow)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *RemoveRow )( 
+            IDatasetProxy * This,
+            /* [in] */ BSTR key,
+            /* [retval][out] */ VARIANT_BOOL *success);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, Clear)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *Clear )( 
+            IDatasetProxy * This);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, GetRecordCount)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *GetRecordCount )( 
+            IDatasetProxy * This,
+            /* [retval][out] */ LONG *count);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, HasKey)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *HasKey )( 
+            IDatasetProxy * This,
+            /* [in] */ BSTR key,
+            /* [retval][out] */ VARIANT_BOOL *exists);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, FetchPageKeys)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FetchPageKeys )( 
+            IDatasetProxy * This,
+            /* [in] */ LONG startIndex,
+            /* [in] */ LONG limit,
+            /* [retval][out] */ VARIANT *keys);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, FetchPageData)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *FetchPageData )( 
+            IDatasetProxy * This,
+            /* [in] */ LONG startIndex,
+            /* [in] */ LONG limit,
+            /* [retval][out] */ VARIANT *keysAndValues);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, RegisterEventCallback)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *RegisterEventCallback )( 
+            IDatasetProxy * This,
+            /* [in] */ IEventCallback *callback);
+        
+        DECLSPEC_XFGVIRT(IDatasetProxy, UnregisterEventCallback)
+        /* [id] */ HRESULT ( STDMETHODCALLTYPE *UnregisterEventCallback )( 
+            IDatasetProxy * This,
+            /* [in] */ IEventCallback *callback);
+        
+        END_INTERFACE
+    } IDatasetProxyVtbl;
+
+    interface IDatasetProxy
+    {
+        CONST_VTBL struct IDatasetProxyVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define IDatasetProxy_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define IDatasetProxy_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define IDatasetProxy_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define IDatasetProxy_GetTypeInfoCount(This,pctinfo)	\
+    ( (This)->lpVtbl -> GetTypeInfoCount(This,pctinfo) ) 
+
+#define IDatasetProxy_GetTypeInfo(This,iTInfo,lcid,ppTInfo)	\
+    ( (This)->lpVtbl -> GetTypeInfo(This,iTInfo,lcid,ppTInfo) ) 
+
+#define IDatasetProxy_GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId)	\
+    ( (This)->lpVtbl -> GetIDsOfNames(This,riid,rgszNames,cNames,lcid,rgDispId) ) 
+
+#define IDatasetProxy_Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr)	\
+    ( (This)->lpVtbl -> Invoke(This,dispIdMember,riid,lcid,wFlags,pDispParams,pVarResult,pExcepInfo,puArgErr) ) 
+
+
+#define IDatasetProxy_SetStorageMode(This,mode)	\
+    ( (This)->lpVtbl -> SetStorageMode(This,mode) ) 
+
+#define IDatasetProxy_GetStorageMode(This,mode)	\
+    ( (This)->lpVtbl -> GetStorageMode(This,mode) ) 
+
+#define IDatasetProxy_AddRow(This,key,value)	\
+    ( (This)->lpVtbl -> AddRow(This,key,value) ) 
+
+#define IDatasetProxy_GetRowData(This,key,data)	\
+    ( (This)->lpVtbl -> GetRowData(This,key,data) ) 
+
+#define IDatasetProxy_UpdateRow(This,key,value,success)	\
+    ( (This)->lpVtbl -> UpdateRow(This,key,value,success) ) 
+
+#define IDatasetProxy_RemoveRow(This,key,success)	\
+    ( (This)->lpVtbl -> RemoveRow(This,key,success) ) 
+
+#define IDatasetProxy_Clear(This)	\
+    ( (This)->lpVtbl -> Clear(This) ) 
+
+#define IDatasetProxy_GetRecordCount(This,count)	\
+    ( (This)->lpVtbl -> GetRecordCount(This,count) ) 
+
+#define IDatasetProxy_HasKey(This,key,exists)	\
+    ( (This)->lpVtbl -> HasKey(This,key,exists) ) 
+
+#define IDatasetProxy_FetchPageKeys(This,startIndex,limit,keys)	\
+    ( (This)->lpVtbl -> FetchPageKeys(This,startIndex,limit,keys) ) 
+
+#define IDatasetProxy_FetchPageData(This,startIndex,limit,keysAndValues)	\
+    ( (This)->lpVtbl -> FetchPageData(This,startIndex,limit,keysAndValues) ) 
+
+#define IDatasetProxy_RegisterEventCallback(This,callback)	\
+    ( (This)->lpVtbl -> RegisterEventCallback(This,callback) ) 
+
+#define IDatasetProxy_UnregisterEventCallback(This,callback)	\
+    ( (This)->lpVtbl -> UnregisterEventCallback(This,callback) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __IDatasetProxy_INTERFACE_DEFINED__ */
 
 
 
@@ -700,6 +1186,14 @@ EXTERN_C const CLSID CLSID_SharedValue;
 
 class DECLSPEC_UUID("71ef033e-e1b5-4985-bc7b-7687426bbdbb")
 SharedValue;
+#endif
+
+EXTERN_C const CLSID CLSID_DatasetProxy;
+
+#ifdef __cplusplus
+
+class DECLSPEC_UUID("c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f")
+DatasetProxy;
 #endif
 #endif /* __ATLProjectcomserverLib_LIBRARY_DEFINED__ */
 

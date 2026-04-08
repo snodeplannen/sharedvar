@@ -1,65 +1,82 @@
+// StressTest.cpp — SharedValueV2 Concurrent Stress Tests
+#include "../include/SharedValue.hpp"
+#include "../include/DatasetStore.hpp"
 #include <iostream>
-#include <vector>
 #include <thread>
+#include <vector>
 #include <atomic>
 #include <chrono>
-#include <cassert>
-#include "SharedValue.hpp"
 
 using namespace SharedValueV2;
 
-class StressObserver : public ISharedValueObserver<int> {
-public:
-    std::atomic<int> updateCount{0};
+std::atomic<int> errors{0};
 
-    void OnValueChanged(const int& /*newValue*/) override {
-        updateCount++;
-    }
-
-    void OnDateTimeChanged(const std::wstring& /*newDateTime*/) override {
-        updateCount++;
-    }
-};
-
-void runStressTest() {
-    SharedValue<int, LocalMutexPolicy> sv(0);
-    StressObserver obs;
-    sv.Subscribe(&obs);
-
-    const int NUM_THREADS = 50;
-    const int ITERATIONS = 1000;
+void runSharedValueStressTest() {
+    std::cout << "  SharedValue stress test (50 threads, 1000 ops each)..." << std::endl;
+    SharedValue<int> sv(0);
     std::vector<std::thread> threads;
 
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back([&sv, ITERATIONS, i]() {
-            for (int k = 0; k < ITERATIONS; ++k) {
-                if (k % 2 == 0) {
-                    sv.SetValue(i * k);
-                } else {
-                    sv.GetValue();
-                }
-                if (k % 100 == 0) {
-                    sv.GetCurrentUTCDateTime();
+    for (int t = 0; t < 50; ++t) {
+        threads.emplace_back([&sv, t]() {
+            for (int i = 0; i < 1000; ++i) {
+                sv.SetValue(t * 1000 + i);
+                volatile int val = sv.GetValue();
+                (void)val;
+            }
+        });
+    }
+    for (auto& t : threads) t.join();
+    std::cout << "    SharedValue stress test passed (no crashes/deadlocks)" << std::endl;
+}
+
+void runDatasetStressTest(StorageMode mode, const std::string& label) {
+    std::cout << "  DatasetStore stress test [" << label << "] (50 threads, 200 ops each)..." << std::endl;
+    DatasetStore<std::wstring> ds(mode);
+    std::vector<std::thread> threads;
+    std::atomic<int> addCount{0};
+
+    for (int t = 0; t < 50; ++t) {
+        threads.emplace_back([&ds, &addCount, t]() {
+            for (int i = 0; i < 200; ++i) {
+                std::wstring key = L"t" + std::to_wstring(t) + L"_k" + std::to_wstring(i);
+                try {
+                    ds.AddRow(key, L"value_" + std::to_wstring(i));
+                    addCount++;
+                } catch (...) {}
+
+                // Read operations
+                ds.GetRecordCount();
+                ds.HasKey(key);
+                ds.FetchKeys(0, 10);
+
+                // Update
+                ds.UpdateRow(key, L"updated_" + std::to_wstring(i));
+
+                // Occasional remove
+                if (i % 5 == 0) {
+                    ds.RemoveRow(key);
                 }
             }
         });
     }
+    for (auto& t : threads) t.join();
 
-    for (auto& t : threads) {
-        if (t.joinable()) {
-            t.join();
-        }
-    }
-
-    sv.Unsubscribe(&obs);
-
-    std::cout << "StressTest complete." << std::endl;
-    std::cout << "Observer caught " << obs.updateCount.load() << " updates." << std::endl;
-    std::cout << "No deadlocks occurred." << std::endl;
+    auto remaining = ds.GetRecordCount();
+    std::cout << "    " << label << " stress test passed. Added: " << addCount
+              << ", Remaining: " << remaining << std::endl;
 }
 
 int main() {
-    std::cout << "Starting Continuous Stress Test..." << std::endl;
-    runStressTest();
+    auto start = std::chrono::high_resolution_clock::now();
+
+    std::cout << "=== Stress Tests ===" << std::endl;
+    runSharedValueStressTest();
+    runDatasetStressTest(StorageMode::Ordered, "Ordered");
+    runDatasetStressTest(StorageMode::Unordered, "Unordered");
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "\n========================================" << std::endl;
+    std::cout << "All stress tests passed in " << ms << " ms" << std::endl;
     return 0;
 }

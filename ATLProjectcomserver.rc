@@ -83,6 +83,14 @@ IDR_ATLPROJECTCOMSERVER    REGISTRY                "ATLProjectcomserver.rgs"
 IDR_MATHOPERATIONS         REGISTRY                "MathOperations.rgs"
 IDR_SHAREDVALUE           REGISTRY                "SharedValue.rgs"
 IDR_SHAREDVALUECALLBACK   REGISTRY                "SharedValueCallback.rgs"
+IDR_DATASETPROXY          REGISTRY                "DatasetProxy.rgs"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// TYPELIB
+//
+
+1 TYPELIB "ATLProjectcomserver.tlb"
 
 #endif    // Nederlands (Nederland) resources
 ///////////////////////////////////////////////////////////////////////////// 

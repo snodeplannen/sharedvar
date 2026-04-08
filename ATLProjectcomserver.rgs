@@ -3,6 +3,9 @@ HKCR
     NoRemove AppID
     {
         '%APPID%' = s 'ATLProjectcomserver'
+        {
+            val DllSurrogate = s ''
+        }
         'ATLProjectcomserver.DLL'
         {
             val AppID = s '%APPID%'

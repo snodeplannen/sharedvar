@@ -112,7 +112,39 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>.\ATLProjectcomserver.def</ModuleDefinitionFile>
-      <RegisterOutput>true</RegisterOutput>
+      <RegisterOutput>false</RegisterOutput>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <SDLCheck>true</SDLCheck>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+    </ClCompile>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <HeaderFileName>ATLProjectcomserver_i.h</HeaderFileName>
+      <InterfaceIdentifierFileName>ATLProjectcomserver_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>ATLProjectcomserver_p.c</ProxyFileName>
+      <GenerateStublessProxies>true</GenerateStublessProxies>
+      <TypeLibraryName>$(IntDir)ATLProjectcomserver.tlb</TypeLibraryName>
+      <DllDataFileName />
+      <ValidateAllParameters>true</ValidateAllParameters>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <ModuleDefinitionFile>.\ATLProjectcomserver.def</ModuleDefinitionFile>
+      <RegisterOutput>false</RegisterOutput>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -153,6 +185,7 @@
     </ClCompile>
     <ClCompile Include="SharedValue.cpp" />
     <ClCompile Include="SharedValueCallback.cpp" />
+    <ClCompile Include="DatasetProxy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ATLProjectcomserver_i.h" />
@@ -162,6 +195,8 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SharedValue.h" />
     <ClInclude Include="SharedValueCallback.h" />
+    <ClInclude Include="DatasetProxy.h" />
+    <ClInclude Include="ComErrorHelper.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +208,7 @@
     <None Include="MathOperations.rgs" />
     <None Include="SharedValue.rgs" />
     <None Include="SharedValueCallback.rgs" />
+    <None Include="DatasetProxy.rgs" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="ATLProjectcomserver.idl" />
