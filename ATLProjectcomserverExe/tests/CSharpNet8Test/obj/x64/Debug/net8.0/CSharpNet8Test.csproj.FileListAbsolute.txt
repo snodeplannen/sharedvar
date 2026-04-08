@@ -1,0 +1,14 @@
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\bin\x64\Debug\net8.0\CSharpNet8Test.exe
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\bin\x64\Debug\net8.0\CSharpNet8Test.deps.json
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\bin\x64\Debug\net8.0\CSharpNet8Test.runtimeconfig.json
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\bin\x64\Debug\net8.0\CSharpNet8Test.dll
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\bin\x64\Debug\net8.0\CSharpNet8Test.pdb
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.GeneratedMSBuildEditorConfig.editorconfig
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.AssemblyInfoInputs.cache
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.AssemblyInfo.cs
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.csproj.CoreCompileInputs.cache
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.dll
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\refint\CSharpNet8Test.dll
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.pdb
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\CSharpNet8Test.genruntimeconfig.cache
+c:\csharp\cursor_com_test\tests\CSharpNet8Test\obj\x64\Debug\net8.0\ref\CSharpNet8Test.dll

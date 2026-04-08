@@ -1,0 +1,27 @@
+HKCR
+{
+    ATLProjectcomserverExe.SharedValueCallback.1 = s 'SharedValueCallback Class'
+    {
+        CLSID = s '{6818dd57-f9e6-45be-aa20-ea4b5b658af3}'
+    }
+    ATLProjectcomserverExe.SharedValueCallback = s 'SharedValueCallback Class'
+    {
+        CLSID = s '{6818dd57-f9e6-45be-aa20-ea4b5b658af3}'
+        CurVer = s 'ATLProjectcomserverExe.SharedValueCallback.1'
+    }
+    NoRemove CLSID
+    {
+        ForceRemove {6818dd57-f9e6-45be-aa20-ea4b5b658af3} = s 'SharedValueCallback Class'
+        {
+            ProgID = s 'ATLProjectcomserverExe.SharedValueCallback.1'
+            VersionIndependentProgID = s 'ATLProjectcomserverExe.SharedValueCallback'
+            ForceRemove Programmable
+            LocalServer32 = s '%MODULE%'
+            {
+                val ThreadingModel = s 'Both'
+            }
+            TypeLib = s '{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}'
+            Version = s '1.0'
+        }
+    }
+} 

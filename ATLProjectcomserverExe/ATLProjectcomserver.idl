@@ -1,0 +1,154 @@
+// ATLProject-comserver.idl : IDL source for ATLProject-comserver
+import "oaidl.idl";
+import "ocidl.idl";
+
+// MathOperations interface
+[
+    object,
+        uuid(488e9f3c-299b-4fe1-8b25-a2b9c2a23506),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface IMathOperations : IDispatch
+{
+    HRESULT Add([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Subtract([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Multiply([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+    HRESULT Divide([in] DOUBLE a, [in] DOUBLE b, [out, retval] DOUBLE* result);
+};
+
+// SharedValueCallback interface (backward compatible)
+[
+    object,
+        uuid(e7639719-258c-46a3-b349-c3c96ac4b46c),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface ISharedValueCallback : IDispatch
+{
+    [id(1)] HRESULT OnValueChanged([in] VARIANT newValue);
+    [id(2)] HRESULT OnDateTimeChanged([in] BSTR newDateTime);
+};
+
+// EventCallback interface (new, rich mutation events)
+[
+    object,
+        uuid(DEC06BDB-7655-4E71-9937-110B78FCC576),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface IEventCallback : IDispatch
+{
+    [id(1)] HRESULT OnMutationEvent(
+        [in] LONG eventType,
+        [in] BSTR key,
+        [in] BSTR oldValue,
+        [in] BSTR newValue,
+        [in] BSTR source,
+        [in] BSTR timestamp,
+        [in] LONG sequenceId
+    );
+};
+
+// SharedValue interface (updated with event callback registration)
+[
+    object,
+        uuid(8D55631F-1994-4F36-A3A3-D5B40EB0E0DB),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface ISharedValue : IDispatch
+{
+    HRESULT SetValue([in] VARIANT value);
+    HRESULT GetValue([out, retval] VARIANT* value);
+    HRESULT GetCurrentUTCDateTime([out, retval] BSTR* dateTime);
+    HRESULT GetCurrentUserLogin([out, retval] BSTR* login);
+    HRESULT LockSharedValue([in] LONG timeoutMs);
+    HRESULT Unlock();
+    HRESULT Subscribe([in] ISharedValueCallback* callback);
+    HRESULT Unsubscribe([in] ISharedValueCallback* callback);
+    [id(10)] HRESULT RegisterEventCallback([in] IEventCallback* callback);
+    [id(11)] HRESULT UnregisterEventCallback([in] IEventCallback* callback);
+};
+
+// DatasetProxy interface (new)
+[
+    object,
+        uuid(50D4D0DB-6D9E-455F-8D6C-749CDBCF1949),
+        dual,
+        nonextensible,
+        pointer_default(unique)
+]
+interface IDatasetProxy : IDispatch
+{
+    // Storage Mode
+    [id(1)] HRESULT SetStorageMode([in] LONG mode);
+    [id(2)] HRESULT GetStorageMode([out, retval] LONG* mode);
+
+    // CRUD
+    [id(10)] HRESULT AddRow([in] BSTR key, [in] BSTR value);
+    [id(11)] HRESULT GetRowData([in] BSTR key, [out, retval] BSTR* data);
+    [id(12)] HRESULT UpdateRow([in] BSTR key, [in] BSTR value, [out, retval] VARIANT_BOOL* success);
+    [id(13)] HRESULT RemoveRow([in] BSTR key, [out, retval] VARIANT_BOOL* success);
+    [id(14)] HRESULT Clear();
+
+    // Query
+    [id(20)] HRESULT GetRecordCount([out, retval] LONG* count);
+    [id(21)] HRESULT HasKey([in] BSTR key, [out, retval] VARIANT_BOOL* exists);
+
+    // Paginering
+    [id(30)] HRESULT FetchPageKeys([in] LONG startIndex, [in] LONG limit, [out, retval] VARIANT* keys);
+    [id(31)] HRESULT FetchPageData([in] LONG startIndex, [in] LONG limit, [out, retval] VARIANT* keysAndValues);
+
+    // Event Callbacks
+    [id(40)] HRESULT RegisterEventCallback([in] IEventCallback* callback);
+    [id(41)] HRESULT UnregisterEventCallback([in] IEventCallback* callback);
+};
+
+// Library definition
+[
+    uuid(B0A0188F-59B6-42A5-AD3A-9D3CBE079253),
+        version(1.0)
+]
+library ATLProjectcomserverLib
+{
+    importlib("stdole2.tlb");
+
+    [
+        uuid(1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF)
+    ]
+        coclass MathOperations
+    {
+        [default] interface IMathOperations;
+    };
+
+    [
+        uuid(6818dd57-f9e6-45be-aa20-ea4b5b658af3)
+    ]
+        coclass SharedValueCallback
+    {
+        [default] interface ISharedValueCallback;
+    };
+
+    [
+        uuid(A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF)
+    ]
+        coclass SharedValue
+    {
+        [default] interface ISharedValue;
+    };
+
+    [
+        uuid(1D85075B-6ECB-4BE4-8317-9DDA91292ED8)
+    ]
+        coclass DatasetProxy
+    {
+        [default] interface IDatasetProxy;
+    };
+};
+
+import "shobjidl.idl";

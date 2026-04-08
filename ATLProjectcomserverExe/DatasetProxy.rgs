@@ -1,0 +1,28 @@
+HKCR
+{
+	ATLProjectcomserverExe.DatasetProxy.1 = s 'DatasetProxy Class'
+	{
+		CLSID = s '{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}'
+	}
+	ATLProjectcomserverExe.DatasetProxy = s 'DatasetProxy Class'
+	{
+		CLSID = s '{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}'
+		CurVer = s 'ATLProjectcomserverExe.DatasetProxy.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {1D85075B-6ECB-4BE4-8317-9DDA91292ED8} = s 'DatasetProxy Class'
+		{
+			ProgID = s 'ATLProjectcomserverExe.DatasetProxy.1'
+			VersionIndependentProgID = s 'ATLProjectcomserverExe.DatasetProxy'
+			ForceRemove 'Programmable'
+			LocalServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Both'
+			}
+			val AppID = s '%APPID%'
+			'TypeLib' = s '{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}'
+			'Version' = s '1.0'
+		}
+	}
+}

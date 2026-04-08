@@ -1,0 +1,17 @@
+/build/
+/x64/
+.vs/
+*.dir/
+*.tlog/
+*.iobj
+*.ipdb
+*.ilk
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+/ATLProje.*/
+/ATLProjectcomserver.*/
+.fake/
+SharedValueV2/build/
