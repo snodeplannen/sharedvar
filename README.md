@@ -1,10 +1,15 @@
-# ATL COM Server & SharedValueV2 — Monorepo
+# ATL COM Server & SharedValue — Monorepo
 
-**Versie:** 0.1.0
+**Versie:** 0.2.0
 
-Een Windows C++ ATL/COM project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen (`VARIANT`) tussen onafhankelijke processen. Intern aangedreven door een moderne, thread-safe, **C++20 header-only core** (`SharedValueV2`).
+Een Windows C++ project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen tussen onafhankelijke processen. Het project biedt twee generaties:
+
+- **SharedValueV2** — COM/RPC-gebaseerde engine met ATL Out-of-Process EXE Server.
+- **SharedValueV3 (MemMap)** — Ultra-fast Memory-Mapped Files engine met FlatBuffers, zonder COM-afhankelijkheid.
 
 ## Projectoverzicht
+
+### COM Server (V2)
 
 Dit project levert **twee varianten** van dezelfde COM Server:
 
@@ -14,6 +19,15 @@ Dit project levert **twee varianten** van dezelfde COM Server:
 | **EXE Server** (LocalServer32) | Out-of-Process EXE | Zelf-registrerend | [`ATLProjectcomserverExe/`](ATLProjectcomserverExe/) |
 
 De EXE-variant is het **primaire productiemodel**: het draait als een zelfstandig Windows-proces waarmee meerdere onafhankelijke clients (C#, VBScript, Python) tegelijkertijd data delen via COM/RPC marshaling.
+
+### Memory-Mapped Engine (V3)
+
+| Component | Taal | Doel | Locatie |
+|---|---|---|---|
+| **C++ Producer** | C++20 | Schrijft FlatBuffer-datasets naar shared memory | [`SharedValueV3_MemMap/cpp_core/`](SharedValueV3_MemMap/cpp_core/) |
+| **C# Consumer** | .NET 9 | Luistert via Named Events en ontvangt callbacks | [`SharedValueV3_MemMap/csharp_core/`](SharedValueV3_MemMap/csharp_core/) |
+
+De V3-engine omzeilt COM volledig. Data wordt gedeeld via een Windows Memory-Mapped File (10 MB kernel page), gesynchroniseerd met Named Mutexes, en gesignaleerd via Named Events — met **nanoseconde-latency** en **0% CPU bij idle**.
 
 ## COM Interfaces
 
@@ -31,7 +45,13 @@ cursor_com_test/
 ├── ATLProjectcomserver.sln          # Centrale Visual Studio Solution (alle projecten)
 ├── ATLProjectcomserverLegacy/       # Legacy In-Process DLL COM Server
 ├── ATLProjectcomserverExe/          # Out-of-Process EXE COM Server (productie)
-├── SharedValueV2/                   # C++20 header-only core library
+├── SharedValueV2/                   # C++20 header-only core library (COM engine)
+├── SharedValueV3_MemMap/            # Memory-Mapped FlatBuffers engine (V3)
+│   ├── schema/                      #   FlatBuffers schema definitie
+│   ├── cpp_core/                    #   C++ native producer
+│   ├── csharp_core/                 #   C# managed consumer
+│   ├── ARCHITECTURE.md              #   Uitgebreide architectuur met Mermaid diagrammen
+│   └── build_schema.ps1             #   Automatische flatc download & codegen
 ├── scripts/                         # PowerShell diagnostische tools
 ├── docs/                            # Ontwerp- en architectuurdocumentatie
 ├── tests/                           # Cross-language integratietests
@@ -78,18 +98,13 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht, of dr
 .\ATLProjectcomserverExe\tests\Run-CrossProcessTests.ps1
 ```
 
-## Verdere Documentatie
+## Documentatie
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technische architectuur, Design Patterns & lagen.
 - [INSTALL.md](INSTALL.md) — Gedetailleerde bouw- en installatie-instructies.
 - [CHANGELOG.md](CHANGELOG.md) — Volledig wijzigingsoverzicht.
 - [docs/](docs/) — Ontwerpdocumenten en migratie-analyses.
-
-## Gerelateerde Documentatie
-
-- [CHANGELOG.md](CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [INSTALL.md](INSTALL.md) — Globale bouw- en installatie-instructies.
-- [README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
-- [README.md](SharedValueV3_MemMap/README.md) — Architectuur en gids voor de ultra-fast Memory-Mapped FlatBuffers engine (V3).
+- [ATLProjectcomserverExe/README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding voor de EXE COM Server variant.
+- [SharedValueV2/README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [SharedValueV3_MemMap/README.md](SharedValueV3_MemMap/README.md) — Quickstart voor de ultra-fast Memory-Mapped FlatBuffers engine (V3).
+- [SharedValueV3_MemMap/ARCHITECTURE.md](SharedValueV3_MemMap/ARCHITECTURE.md) — Uitgebreid V3-architectuurdocument met Mermaid-diagrammen.
