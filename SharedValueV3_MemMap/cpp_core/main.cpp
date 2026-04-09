@@ -14,6 +14,7 @@ void PrintUsage() {
               << "  --interval MS   Milliseconds between updates (default: 2000)\n"
               << "  --rows N        Number of DataRows per update (default: 1)\n"
               << "  --name NAME     Shared memory name (default: MyGlobalDataset)\n"
+              << "  --linger MS     Milliseconds to keep alive after last write (default: 5000)\n"
               << "  --help          Show this help\n";
 }
 
@@ -21,6 +22,7 @@ int main(int argc, char* argv[]) {
     int maxCount = 0;       // 0 = infinite
     int intervalMs = 2000;
     int rowCount = 1;
+    int lingerMs = 5000;    // keep alive after last write
     std::string name = "MyGlobalDataset";
 
     // Parse command line arguments
@@ -34,6 +36,8 @@ int main(int argc, char* argv[]) {
             rowCount = std::atoi(argv[++i]);
         } else if (arg == "--name" && i + 1 < argc) {
             name = argv[++i];
+        } else if (arg == "--linger" && i + 1 < argc) {
+            lingerMs = std::atoi(argv[++i]);
         } else if (arg == "--help") {
             PrintUsage();
             return 0;
@@ -106,7 +110,9 @@ int main(int argc, char* argv[]) {
             counter++;
         }
 
-        std::cout << "[Producer] Completed " << counter << " updates. Exiting." << std::endl;
+        std::cout << "[Producer] Completed " << counter << " updates. Lingering " << lingerMs << "ms before exit." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(lingerMs));
+        std::cout << "[Producer] Exiting." << std::endl;
     } 
     catch (const std::exception& e) {
         std::cerr << "[Producer Error] " << e.what() << std::endl;
