@@ -1,26 +1,84 @@
-# ATL COM Server & SharedValueV2 Project
+# ATL COM Server & SharedValueV2 — Monorepo
 
-Welkom bij dit ATL COM Server project. Deze repository bevat een klassiek **Windows C++ ATL/COM component** gecombineerd met een hypermoderne, thread-safe, **C++20 header-only core (SharedValueV2)**. 
+Een Windows C++ ATL/COM project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen (`VARIANT`) tussen onafhankelijke processen. Intern aangedreven door een moderne, thread-safe, **C++20 header-only core** (`SharedValueV2`).
 
-Oorspronkelijk was dit project ontwikkeld als leerschool voor het uitwisselen en opslaan van variabelen (`VARIANT`) tussen diverse client applicaties. Het is onlangs volledig geherstructureerd voor high-performance multithreading zonder vastlopers of deadlocks.
+## Projectoverzicht
 
-## Functionaliteit
+Dit project levert **twee varianten** van dezelfde COM Server:
 
-Via deze COM Server DLL worden onafhankelijke functionaliteiten blootgesteld (te benaderen vanuit C++, C#, Python e.a.):
+| Variant | Type | Registratie | Locatie |
+|---|---|---|---|
+| **Legacy DLL** (InprocServer32) | In-Process DLL | `regsvr32` | [`ATLProjectcomserverLegacy/`](ATLProjectcomserverLegacy/) |
+| **EXE Server** (LocalServer32) | Out-of-Process EXE | Zelf-registrerend | [`ATLProjectcomserverExe/`](ATLProjectcomserverExe/) |
 
-1. **`MathOperations`** (`IMathOperations`): Een eenvoudige component voor stateless basis rekenkundige berekeningen (Add, Subtract, Multiply, Divide).
-2. **`SharedValue`** (`ISharedValue`): Het hoofdonderdeel van dit project. Een iteratie waarbij een in-process memory state veilig bekeken (`GetValue`), ontgrendeld geraadpleegd gepauzeerd (`LockSharedValue`) en weggescreven (`SetValue`) kan worden. Tevens ondersteunt deze objecten event-subscriptie voor observer notificaties.
-3. **`SharedValueCallback`** (`ISharedValueCallback`): C++ proxy-interface voor het observer-pattern, zodat externe scripts en integraties live te horen krijgen wanner er datetime- of inhoudelijk wijzigingen aan de state zijn gemaakt.
+De EXE-variant is het **primaire productiemodel**: het draait als een zelfstandig Windows-proces waarmee meerdere onafhankelijke clients (C#, VBScript, Python) tegelijkertijd data delen via COM/RPC marshaling.
 
-## Project Architectuur & Ontwerp
-Ben je geïnteresseerd in de interne robuustheid en de Design Patterns (zoals *Policy-Based Design* en *Monitor Pattern*)? 
-Vind een volledig overzicht in: **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+## COM Interfaces
 
-## Compatibiliteit
-- Visual Studio 2022.
-- Ondersteunt x64 architectuur (en Win32 waar geconfigureerd).
-- Te registreren in het Windows Register via `regsvr32`.
+Beide varianten exposeren dezelfde drie interfaces:
 
-## Hoe te Bouwen, Installeren en Testen
-Wil je dit project zelf compileren op een verse machine of lokaal de ingebouwde CMake Multithreaded Chaos tests (StressTest) draaien?
-Lees de installatie- en debug handleiding in: **[INSTALL.md](INSTALL.md)**.
+1. **`IMathOperations`** — Stateless rekenkundige bewerkingen (Add, Subtract, Multiply, Divide).
+2. **`ISharedValue`** — Singleton in-memory state: `GetValue`, `SetValue`, `LockSharedValue`, observer-subscripties, en `ShutdownServer` (alleen EXE).
+3. **`IDatasetProxy`** — Pagineerbare key-value dataset: `AddRow`, `GetRowData`, `UpdateRow`, `RemoveRow`, `FetchPageKeys`, `FetchPageData`, met configureerbare `StorageMode`.
+4. **`ISharedValueCallback`** — Observer-interface voor live event-notificaties bij state-wijzigingen.
+
+## Directorystructuur
+
+```
+cursor_com_test/
+├── ATLProjectcomserver.sln          # Centrale Visual Studio Solution (alle projecten)
+├── ATLProjectcomserverLegacy/       # Legacy In-Process DLL COM Server
+├── ATLProjectcomserverExe/          # Out-of-Process EXE COM Server (productie)
+├── SharedValueV2/                   # C++20 header-only core library
+├── scripts/                         # PowerShell diagnostische tools
+├── docs/                            # Ontwerp- en architectuurdocumentatie
+├── tests/                           # Cross-language integratietests
+├── ARCHITECTURE.md                  # Technische architectuur & Design Patterns
+├── CHANGELOG.md                     # Wijzigingshistorie
+└── INSTALL.md                       # Compilatie- en installatie-instructies
+```
+
+## Snel Bouwen
+
+### Vereisten
+- **Visual Studio 2022** met workload `Desktop development with C++` en component `C++ ATL for latest v143 build tools`.
+- **CMake ≥ 3.20** (alleen voor SharedValueV2 standalone tests).
+
+### Compilatie via Command Line
+```powershell
+# Laad de MSVC build-omgeving
+. Invoke-BuildEnvironment.ps1 -Toolchain MSVC -Version "Enterprise 2022" -Architecture x64
+
+# Bouw de gehele solution (Legacy DLL + EXE Server + testtool)
+msbuild ATLProjectcomserver.sln /p:Configuration=Debug /p:Platform=x64 -m
+```
+
+### Compilatie via Visual Studio
+1. Open `ATLProjectcomserver.sln`.
+2. Selecteer `Debug | x64`.
+3. Build → Build Solution (`F7`).
+
+## COM Server Registreren
+
+```cmd
+:: Legacy DLL (als Administrator)
+regsvr32 x64\Debug\ATLProjectcomserver.dll
+
+:: EXE Server (zelf-registrerend, als Administrator)
+x64\Debug\ATLProjectcomserver.exe /RegServer
+```
+
+## Testen
+
+Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht, of draai de geautomatiseerde cross-process suite:
+
+```powershell
+.\ATLProjectcomserverExe\tests\Run-CrossProcessTests.ps1
+```
+
+## Verdere Documentatie
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Technische architectuur, Design Patterns & lagen.
+- [INSTALL.md](INSTALL.md) — Gedetailleerde bouw- en installatie-instructies.
+- [CHANGELOG.md](CHANGELOG.md) — Volledig wijzigingsoverzicht.
+- [docs/](docs/) — Ontwerpdocumenten en migratie-analyses.
