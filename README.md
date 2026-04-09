@@ -92,3 +92,4 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht, of dr
 - [INSTALL.md](INSTALL.md) — Globale bouw- en installatie-instructies.
 - [README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
 - [README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README.md](SharedValueV3_MemMap/README.md) — Architectuur en gids voor de ultra-fast Memory-Mapped FlatBuffers engine (V3).

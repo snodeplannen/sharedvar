@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.0] - 2026-04-09
 	### Added
+- **Memory-Mapped Engine (V3)**: Designed and implemented a zero-overhead, ultra-fast `SharedValueV3_MemMap` cross-process communication engine using Windows Memory-Mapped Files, fully avoiding COM RPC bottlenecks.
+- **FlatBuffers Integration**: Successfully introduced Google FlatBuffers (`dataset.fbs`) for dynamic array nesting and schema evolution within the rigid constraints of shared memory maps.
+- **Central API Wrappers**: Created `SharedValueEngine.hpp` (C++) and `SharedValueEngine.cs` (C#) to elegantly abstract complex multithreading, mutexes (`WaitOne`), and Named Events (`CreateEventW`) cross-process callbacks away from the user.
+- **Automated Tooling**: Implemented `build_schema.ps1` to download `flatc` safely and re-generate schema classes on the fly for pristine builds.
 - **XML Documentation**: Configured C++, CMake, and C# projects to globally generate XML documentation files (`.xml` / `.xmldoc`) upon build for enhanced developer API referencing.
 - **Out-of-Process COM Server**: Migrated `ATLProjectcomserverExe` to a `LocalServer32` EXE to support isolated cross-process data sharing.
 - **Graceful Shutdown**: Added `ISharedValue::ShutdownServer()` to cleanly tear down the EXE server across RPC bounds without orphaned `DatasetProxy` locks.
