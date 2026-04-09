@@ -1,5 +1,7 @@
 # ATL COM Server & SharedValueV2 — Monorepo
 
+**Versie:** 0.1.0
+
 Een Windows C++ ATL/COM project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen (`VARIANT`) tussen onafhankelijke processen. Intern aangedreven door een moderne, thread-safe, **C++20 header-only core** (`SharedValueV2`).
 
 ## Projectoverzicht
