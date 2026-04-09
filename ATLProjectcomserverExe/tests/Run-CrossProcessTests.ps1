@@ -8,8 +8,6 @@
 #>
 
 $ErrorActionPreference = "Stop"
-$exePath = "c:\csharp\cursor_com_test\ATLProjectcomserverExe\x64\Release\ATLProjectcomserver.exe"
-
 Write-Host "===========================" -ForegroundColor Cyan
 Write-Host " COM EXE INTEGRATION TESTS " -ForegroundColor Cyan
 Write-Host "===========================" -ForegroundColor Cyan

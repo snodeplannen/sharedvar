@@ -1,5 +1,10 @@
 #pragma once
 
+#include <atlbase.h>
+#include <atlcom.h>
+#include "Resource.h"
+#include "ATLProjectcomserver_i.h"
+
 class CATLProjectcomserverExeModule : public ATL::CAtlExeModuleT<CATLProjectcomserverExeModule>
 {
 public:
