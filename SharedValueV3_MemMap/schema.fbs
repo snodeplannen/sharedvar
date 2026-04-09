@@ -1,0 +1,25 @@
+// schema.fbs
+namespace SharedData;
+
+// Nested object representing metadata
+table Metadata {
+  timestamp: string;
+  source: string;
+  status_code: int;
+}
+
+// Representing a single sensor row
+table SensorRow {
+  sensor_name: string;
+  value: double;
+  is_active: bool;
+}
+
+// The root layout stored in the Memory Mapped File
+table RootDataset {
+  version: int;
+  meta: Metadata;
+  sensors: [SensorRow];
+}
+
+root_type RootDataset;
