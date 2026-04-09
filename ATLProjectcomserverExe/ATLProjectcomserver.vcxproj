@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
-    <ProjectGuid>{86BE8DF9-669E-4443-B1A0-BD69EA9E40CC}</ProjectGuid>
+    <ProjectGuid>{B0B4C3D4-1111-4E67-B9A0-BD69EA9E40DD}</ProjectGuid>
     <Keyword>AtlProj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
