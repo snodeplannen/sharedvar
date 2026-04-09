@@ -7,7 +7,11 @@ namespace SharedValueV2 {
 
 // Helper to narrow wstring to string for exception messages
 inline std::string narrow(const std::wstring& ws) {
-    std::string s(ws.begin(), ws.end());
+    std::string s;
+    s.reserve(ws.length());
+    for (wchar_t wc : ws) {
+        s.push_back(static_cast<char>(wc));
+    }
     return s;
 }
 

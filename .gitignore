@@ -11,8 +11,8 @@
 *.dll
 *.lib
 *.exp
-/ATLProje.*/
-/ATLProjectcomserver.*/
+ATLProje.*/
+ATLProjectcomserver.*/
 .fake/
 SharedValueV2/build/
 # COM Auto-Generated Files (TypeLib Headers)

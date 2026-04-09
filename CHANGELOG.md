@@ -3,7 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [0.1.0] - 2026-04-09
-### Added
+	### Added
+- **XML Documentation**: Configured C++, CMake, and C# projects to globally generate XML documentation files (`.xml` / `.xmldoc`) upon build for enhanced developer API referencing.
 - **Out-of-Process COM Server**: Migrated `ATLProjectcomserverExe` to a `LocalServer32` EXE to support isolated cross-process data sharing.
 - **Graceful Shutdown**: Added `ISharedValue::ShutdownServer()` to cleanly tear down the EXE server across RPC bounds without orphaned `DatasetProxy` locks.
 - **Shutdown CLI Tools**: Added `stop_server.cpp` and `stop_server.vbs` as reference tools to gracefully exit the standalone COM server.
