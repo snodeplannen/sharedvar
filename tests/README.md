@@ -1,46 +1,111 @@
 # Tests — Cross-Language Integratietests
 
-Integratietests die de COM Server valideren vanuit verschillende programmeertalen en scenario's.
+Dit project bevat integratietests voor **twee aparte COM server varianten**. Het is belangrijk te weten welke variant je test, want ze gebruiken verschillende ProgIDs en een fundamenteel ander communicatiemodel.
 
-## Rol binnen het project
+## De Twee Testvarianten
 
-Deze tests bevinden zich in de **project root** en zijn primair gericht op de **Legacy DLL** variant (`ATLProjectcomserver.SharedValue` / `ATLProjectcomserver.DatasetProxy`). Voor de EXE-variant bestaan aparte tests in [`ATLProjectcomserverExe/tests/`](../ATLProjectcomserverExe/tests/).
+| | **Legacy DLL Tests** (deze directory) | **EXE Server Tests** |
+|---|---|---|
+| **Server** | InprocServer32 DLL | LocalServer32 EXE |
+| **ProgID prefix** | `ATLProjectcomserver.*` | `ATLProjectcomserverExe.*` |
+| **Server locatie** | Geladen in client-proces | Apart Windows-proces |
+| **Communicatie** | Directe functie-aanroepen | RPC via LRPC Named Pipe |
+| **Registreren** | `regsvr32 ATLProjectcomserver.dll` | `ATLProjectcomserver.exe /RegServer` |
+| **Data gedeeld?** | ❌ Per proces een kopie | ✅ Gedeeld tussen alle clients |
+| **Testlocatie** | `tests/` *(deze map)* | `ATLProjectcomserverExe/tests/` |
 
-## Directorystructuur
+---
+
+## Tests in deze directory (Legacy DLL)
+
+> **COM Server Variant:** Legacy In-Process DLL (`ATLProjectcomserver.dll`)
+
+De tests hier zijn primair gericht op de **Legacy InprocServer32 DLL** variant. Ze valideren de correctheid van de COM interfaces, foutafhandeling en event-mechanismen — maar ze testen **geen echte cross-process data sharing** (daarvoor is de EXE server nodig).
+
+### Vereiste registratie
+
+```cmd
+:: Als Administrator
+regsvr32 x64\Debug\ATLProjectcomserver.dll
+```
+
+### Directorystructuur
 
 ```
 tests/
-├── CSharpNet8Test/             # C# .NET 8 integratietests (DLL variant)
-│   ├── Program.cs              # Testprogramma (CRUD, error handling, storage modes)
-│   └── CSharpNet8Test.csproj   # .NET 8 projectbestand
-└── VBScriptTest/               # VBScript integratietests
-    ├── TestProducerSleep.vbs   # Producer die data schrijft en wacht
-    ├── TestProducerString.vbs  # Producer die een string wegschrijft
-    ├── TestProducerVBS.vbs     # Producer met DatasetProxy bewerkingen
-    ├── TestConsumerString.vbs  # Consumer die een string uitleest
-    ├── TestConsumerVBS.vbs     # Consumer die DatasetProxy rijen uitleest
-    ├── TestFullCycle.vbs       # Volledige producer+consumer cyclus in één script
-    ├── TestErrorHandling.vbs   # Test van COM error handling (KeyNotFound, etc.)
-    └── TestEventCallbacks.vbs  # Test van observer event callbacks
+├── CSharpNet8Test/             # C# .NET 8 integratietests (14 tests)
+│   ├── Program.cs
+│   └── CSharpNet8Test.csproj
+└── VBScriptTest/               # VBScript integratietests (8 scripts)
+    ├── TestFullCycle.vbs       # ⭐ Aanbevolen startpunt
+    ├── TestErrorHandling.vbs
+    ├── TestEventCallbacks.vbs
+    ├── TestProducerString.vbs
+    ├── TestConsumerString.vbs
+    ├── TestProducerVBS.vbs
+    ├── TestProducerSleep.vbs
+    └── TestConsumerVBS.vbs
 ```
 
-## Tests Draaien
+---
 
-### C# .NET 8
+## CSharpNet8Test — C# .NET 8 (Legacy DLL)
 
+Zie [`CSharpNet8Test/README.md`](CSharpNet8Test/) voor de volledige beschrijving van alle 5 testcategorieën.
+
+**Snel draaien:**
 ```powershell
 cd tests\CSharpNet8Test
 dotnet run
 ```
 
-### VBScript
+**Wat getest wordt:**
+1. Producer Flow — 100 rijen wegschrijven en parkeren in `SharedValue`
+2. Consumer Flow — rijen teruglezen, data-integriteit en paginering valideren
+3. Bidirectionele Mutatie — `UpdateRow` en `RemoveRow`
+4. Error Handling — `COMException` bij `KeyNotFound`, `DuplicateKey`, `StoreModeNotEmpty`
+5. Storage Mode — wisselen tussen `std::map` en `std::unordered_map`
+
+---
+
+## VBScriptTest — VBScript (Legacy DLL)
+
+Zie [`VBScriptTest/README.md`](VBScriptTest/) voor volledige per-script documentatie.
+
+### Standalone tests (één terminal)
 
 ```powershell
+# Aanbevolen startpunt — volledige CRUD cyclus
 cscript //Nologo tests\VBScriptTest\TestFullCycle.vbs
+
+# Error handling
+cscript //Nologo tests\VBScriptTest\TestErrorHandling.vbs
+
+# Event callbacks (register/unregister observer)
+cscript //Nologo tests\VBScriptTest\TestEventCallbacks.vbs
 ```
 
-## Vereisten
+### Producer/Consumer tests (twee terminals)
 
-- De Legacy DLL COM Server moet geregistreerd zijn via `regsvr32`.
-- .NET 8 SDK voor de C# tests.
-- `cscript.exe` (standaard aanwezig op Windows) voor VBScript tests.
+```powershell
+# Terminal 1 — eenvoudige string
+cscript //Nologo tests\VBScriptTest\TestProducerString.vbs
+# Terminal 2
+cscript //Nologo tests\VBScriptTest\TestConsumerString.vbs
+
+# Terminal 1 — DatasetProxy met 3 server-status rijen
+cscript //Nologo tests\VBScriptTest\TestProducerVBS.vbs
+# Terminal 2
+cscript //Nologo tests\VBScriptTest\TestConsumerVBS.vbs
+```
+
+---
+
+## EXE Server Tests (cross-process)
+
+Voor echte cross-process data sharing tests, zie [`ATLProjectcomserverExe/tests/`](../ATLProjectcomserverExe/tests/).
+
+```powershell
+# Geautomatiseerde suite: 6 cross-process scenario's inclusief graceful shutdown
+.\ATLProjectcomserverExe\tests\Run-CrossProcessTests.ps1
+```
