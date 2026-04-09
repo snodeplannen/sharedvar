@@ -83,5 +83,5 @@
     "*.idl": "midl",
     "*.rgs": "registry"
   },
-  "cmake.sourceDirectory": "C:/csharp/cursor_com_test/SharedValueV2"
+  "cmake.sourceDirectory": "${workspaceFolder}/SharedValueV2"
 }
