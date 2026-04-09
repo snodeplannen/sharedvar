@@ -24,4 +24,4 @@ SharedValueV2/build/
 
 # Temporary debugging scripts & logs
 test_*.vbs
-build.log
+*.log
