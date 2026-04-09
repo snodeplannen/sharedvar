@@ -70,3 +70,10 @@ De `--linger MS` parameter lost dit op: de producer wacht na zijn laatste write 
 
 **Bij normaal (productie) gebruik is `--linger` niet nodig.** De producer draait dan oneindig (`--count` wordt niet opgegeven) en de kernel objects bestaan zolang het producer-proces draait. Consumers kunnen op elk moment verbinden en loskoppelen.
 
+## Gerelateerde Documentatie
+
+- [README.md](../README.md) — Introductie, projectstructuur en quickstart voor SharedValueV3 MemMap.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Uitgebreid architectuurdocument inclusief kernel object levenscyclus en reference counting.
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [CHANGELOG.md](../../CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
+
