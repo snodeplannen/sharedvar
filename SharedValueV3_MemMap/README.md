@@ -14,14 +14,36 @@ Deze **MemMap Engine** elimineert die overhead volledig:
 *   `schema/` bevat de `dataset.fbs`. Dit is de FlatBuffers datadefinitie. 
 *   `cpp_core/` is de C++ Native Producer.
 *   `csharp_core/` is de C# Managed Consumer.
+*   `tests/` bevat de geautomatiseerde end-to-end test suite.
 *   `build_schema.ps1` downloadt automatisch de Google `flatc` compiler en regenereert de wrapper code o.b.v. je schema in beide talen.
 
-## Hoe te draaien (Testen)
-1. **Open een Terminal:** Navigeer naar `cpp_core\build\Release` (compileer eerst via CMake indien leeg) en start `MemMapProducer.exe`. Deze gooit elke 2 seconden een nieuwe lading FlatBuffer payload in het gedeelde geheugen.
-2. **Open een 2e Terminal:** Navigeer naar `csharp_core` en run `dotnet run`. Je ziet C# nanoseconden later ontwaken, de array uitlezen via pointers, en de data verwerken! (Vrij van alle MSBuild of Nullable warnings).
+## Hoe te draaien
+
+### Interactief (handmatig)
+1. **Open een Terminal:** Start de producer met optionele parameters:
+   ```powershell
+   .\cpp_core\build\Release\MemMapProducer.exe
+   .\cpp_core\build\Release\MemMapProducer.exe --count 10 --interval 500 --rows 3
+   ```
+2. **Open een 2e Terminal:** Start de consumer:
+   ```powershell
+   cd csharp_core
+   dotnet run
+   dotnet run -- --count 5    # Auto-exit na 5 events
+   ```
+
+### Geautomatiseerd (Test Suite)
+Draai de volledige end-to-end test suite die 6 scenario's valideert:
+```powershell
+.\tests\Run-MemMapTests.ps1             # Inclusief build
+.\tests\Run-MemMapTests.ps1 -SkipBuild  # Zonder rebuild
+```
+
+Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht en alle CLI-argumenten.
 
 ## Gerelateerde Documentatie
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Uitgebreid architectuurdocument met Mermaid-diagrammen over Memory-Mapped Files, FlatBuffers serialisatie, de synchronisatieprimitieven (Mutex/Event), de producer-consumer levenscyclus, exception hiërarchieën, en de build pipeline.
+- [tests/README.md](tests/README.md) — Testoverzicht, CLI-argumenten, en uitleg over testscenario's.
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
 - [CHANGELOG.md](../CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.

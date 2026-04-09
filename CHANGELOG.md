@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [0.2.0] - 2026-04-09
 
 ### Added
+- **End-to-End Test Suite**: Implemented `Run-MemMapTests.ps1` with 6 automated test scenarios covering basic data transfer, multi-row datasets, consumer-before-producer retry, connection timeout, rapid-fire stress testing, and boolean field validation.
+- **CLI Arguments**: Extended both producer (`--count`, `--interval`, `--rows`, `--name`) and consumer (`--count`, `--timeout`, `--name`) with command-line arguments for test automation and flexible usage.
+- **Exit Codes**: Added structured exit codes to the C# consumer (0=success, 2=connection timeout, 3=event timeout) for reliable test orchestration.
 - **SharedValueV3 Memory-Mapped Engine**: Designed and implemented a zero-overhead, ultra-fast `SharedValueV3_MemMap` cross-process communication engine using Windows Memory-Mapped Files, fully bypassing all COM/RPC bottlenecks.
 - **FlatBuffers Integration**: Introduced Google FlatBuffers (`dataset.fbs`) for dynamic array nesting, unlimited depth, and forward/backward-compatible schema evolution within shared memory.
 - **Central API Wrappers**: Created `SharedValueEngine.hpp` (C++) and `SharedValueEngine.cs` (C#) to elegantly abstract cross-process mutexes, named events, and memory-mapped I/O behind a single class.
