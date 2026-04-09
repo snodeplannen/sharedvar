@@ -1,3 +1,6 @@
+# Root clangd configuration
+# Relative paths are resolved from this file's location (project root)
+
 CompileFlags:
   Compiler: clang-cl
   Add:
@@ -11,29 +14,32 @@ CompileFlags:
     - "-DWIN32"
     - "-DNOMINMAX"
     - "-DWIN32_LEAN_AND_MEAN"
+    # MSVC Standard Library (external - must be absolute)
     - "-isystem"
     - "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.44.35207\\include"
     - "-isystem"
     - "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\include"
     - "-isystem"
     - "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.44.35207\\atlmfc\\include"
+    # Windows SDK (external - must be absolute)
     - "-isystem"
     - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt"
     - "-isystem"
     - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
     - "-isystem"
     - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared"
+    # ATL COM Server project (relative)
     - "-I"
-    - "C:\\csharp\\cursor_com_test\\ATLProjectcomserverExe"
+    - "ATLProjectcomserverExe"
     - "-I"
-    - "C:\\csharp\\cursor_com_test\\SharedValueV2\\include"
+    - "SharedValueV2/include"
     - "-I"
-    - "C:\\csharp\\cursor_com_test\\ATLProjectcomserverExe\\x64\\Release"
-    # SharedValueV3 MemMap - FlatBuffers headers (CMake FetchContent)
+    - "ATLProjectcomserverExe/x64/Release"
+    # SharedValueV3 MemMap (relative)
     - "-isystem"
-    - "C:\\csharp\\cursor_com_test\\SharedValueV3_MemMap\\cpp_core\\build\\_deps\\flatbuffers-src\\include"
+    - "SharedValueV3_MemMap/cpp_core/build/_deps/flatbuffers-src/include"
     - "-I"
-    - "C:\\csharp\\cursor_com_test\\SharedValueV3_MemMap\\cpp_core"
+    - "SharedValueV3_MemMap/cpp_core"
 
 Diagnostics:
   UnusedIncludes: None
