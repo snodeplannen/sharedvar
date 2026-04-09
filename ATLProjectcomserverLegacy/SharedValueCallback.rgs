@@ -1,0 +1,27 @@
+HKCR
+{
+    ATLProjectcomserver.SharedValueCallback.1 = s 'SharedValueCallback Class'
+    {
+        CLSID = s '{6818dd57-f9e6-45be-aa20-ea4b5b658af3}'
+    }
+    ATLProjectcomserver.SharedValueCallback = s 'SharedValueCallback Class'
+    {
+        CLSID = s '{6818dd57-f9e6-45be-aa20-ea4b5b658af3}'
+        CurVer = s 'ATLProjectcomserver.SharedValueCallback.1'
+    }
+    NoRemove CLSID
+    {
+        ForceRemove {6818dd57-f9e6-45be-aa20-ea4b5b658af3} = s 'SharedValueCallback Class'
+        {
+            ProgID = s 'ATLProjectcomserver.SharedValueCallback.1'
+            VersionIndependentProgID = s 'ATLProjectcomserver.SharedValueCallback'
+            ForceRemove Programmable
+            InprocServer32 = s '%MODULE%'
+            {
+                val ThreadingModel = s 'Both'
+            }
+            TypeLib = s '{86be8df9-669e-4443-b1a0-bd69ea9e40cc}'
+            Version = s '1.0'
+        }
+    }
+} 

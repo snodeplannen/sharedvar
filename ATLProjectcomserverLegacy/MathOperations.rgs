@@ -1,0 +1,27 @@
+HKCR
+{
+    ATLProjectcomserver.MathOperations.1 = s 'MathOperations Class'
+    {
+        CLSID = s '{b97b4532-1222-4229-a090-d625c1e9532b}'
+    }
+    ATLProjectcomserver.MathOperations = s 'MathOperations Class'
+    {
+        CLSID = s '{b97b4532-1222-4229-a090-d625c1e9532b}'
+        CurVer = s 'ATLProjectcomserver.MathOperations.1'
+    }
+    NoRemove CLSID
+    {
+        ForceRemove {b97b4532-1222-4229-a090-d625c1e9532b} = s 'MathOperations Class'
+        {
+            ProgID = s 'ATLProjectcomserver.MathOperations.1'
+            VersionIndependentProgID = s 'ATLProjectcomserver.MathOperations'
+            ForceRemove Programmable
+            InprocServer32 = s '%MODULE%'
+            {
+                val ThreadingModel = s 'Both'
+            }
+            TypeLib = s '{86be8df9-669e-4443-b1a0-bd69ea9e40cc}'
+            Version = s '1.0'
+        }
+    }
+} 

@@ -1,0 +1,28 @@
+HKCR
+{
+    ATLProjectcomserver.SharedValue.1 = s 'SharedValue Class'
+    {
+        CLSID = s '{71ef033e-e1b5-4985-bc7b-7687426bbdbb}'
+    }
+    ATLProjectcomserver.SharedValue = s 'SharedValue Class'
+    {
+        CLSID = s '{71ef033e-e1b5-4985-bc7b-7687426bbdbb}'
+        CurVer = s 'ATLProjectcomserver.SharedValue.1'
+    }
+    NoRemove CLSID
+    {
+        ForceRemove {71ef033e-e1b5-4985-bc7b-7687426bbdbb} = s 'SharedValue Class'
+        {
+            ProgID = s 'ATLProjectcomserver.SharedValue.1'
+            VersionIndependentProgID = s 'ATLProjectcomserver.SharedValue'
+            ForceRemove Programmable
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Both'
+			}
+			val AppID = s '%APPID%'
+			TypeLib = s '{86be8df9-669e-4443-b1a0-bd69ea9e40cc}'
+			Version = s '1.0'
+		}
+    }
+} 

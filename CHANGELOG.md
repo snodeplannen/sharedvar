@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Integration Test Suite**: Added `tests\Run-CrossProcessTests.ps1` to orchestrate isolated producer/consumer lifecycle scenarios and validate array marshaling.
 
 ### Changed
+- **Legacy InProcess Server Relocation**: Moved the original `ATLProjectcomserver` DLL implementation and its associated build assets from the project root into a dedicated `ATLProjectcomserverLegacy` subdirectory to improve repository organization. The `comserver_testtool` dependencies and MSBuild parameters were adjusted accordingly.
 - **Variant SAFEARRAY**: Modified `DatasetProxy::FetchPageKeys` and `FetchPageData` to return `VT_ARRAY | VT_VARIANT` arrays instead of `VT_BSTR` to fix standard VBScript `Type Mismatch` interoperability issues.
 - **Singleton Architecture**: `SharedValue` now instantiates the `DatasetProxy` server-side during `FinalConstruct` to ensure stable references are retained without client ownership dropping.
 - **Diagnostic Tool**: Overhauled `Invoke-ComDiagnostics.ps1` to independently validate both the Legacy `InprocServer32` DLL and modern `LocalServer32` EXE registry mappings.

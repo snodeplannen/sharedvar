@@ -82,5 +82,6 @@
   "files.associations": {
     "*.idl": "midl",
     "*.rgs": "registry"
-  }
+  },
+  "cmake.sourceDirectory": "C:/csharp/cursor_com_test/SharedValueV2"
 }
