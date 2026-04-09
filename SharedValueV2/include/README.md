@@ -31,3 +31,11 @@ DatasetStore.hpp ──► StorageEngine.hpp
                  ──► LockPolicies.hpp
                  ──► DatasetObserver.hpp
 ```
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

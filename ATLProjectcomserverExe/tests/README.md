@@ -138,3 +138,11 @@ Zie [`CSharpNet8Test/README.md`](CSharpNet8Test/) voor de volledige beschrijving
 cd tests\CSharpNet8Test
 dotnet run
 ```
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

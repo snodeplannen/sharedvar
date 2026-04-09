@@ -997,3 +997,12 @@ mindmap
 | **Monitor** | `SharedValue`, `DatasetStore` | Data ontoegankelijk buiten locked scope |
 | **Template Method** | ATL `FinalConstruct` / `FinalRelease` | Framework-gestuurde object lifecycle |
 | **Copy-then-Notify** | Alle observer notificaties | Deadlock-preventie |
+
+
+## Gerelateerde Documentatie
+
+- [README.md](README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [INSTALL.md](INSTALL.md) — Installatie-, registratie- en configuratiegids voor de EXE server.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

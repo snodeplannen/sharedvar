@@ -842,3 +842,12 @@ mindmap
 | **Proxy** | COM Proxy/Stub, .NET RCW | Transparante cross-process communicatie |
 | **Template Method** | ATL `FinalConstruct` / `FinalRelease` | Framework-gestuurde object lifecycle |
 | **Copy-then-Notify** | `notifyValueChanged()`, `EventBus::Emit()` | Deadlock-preventie bij observer notificaties |
+
+
+## Gerelateerde Documentatie
+
+- [CHANGELOG.md](CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
+- [README.md](README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [INSTALL.md](INSTALL.md) — Globale bouw- en installatie-instructies.
+- [README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

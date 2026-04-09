@@ -82,3 +82,11 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht, of dr
 - [INSTALL.md](INSTALL.md) — Gedetailleerde bouw- en installatie-instructies.
 - [CHANGELOG.md](CHANGELOG.md) — Volledig wijzigingsoverzicht.
 - [docs/](docs/) — Ontwerpdocumenten en migratie-analyses.
+
+## Gerelateerde Documentatie
+
+- [CHANGELOG.md](CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [INSTALL.md](INSTALL.md) — Globale bouw- en installatie-instructies.
+- [README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

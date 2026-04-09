@@ -145,3 +145,11 @@ C# dynamic  →  DLR  →  RCW  →  IDispatch::GetIDsOfNames("AddRow")
 ```
 
 De `dynamic` keyword in C# laat het .NET DLR (Dynamic Language Runtime) alle member-lookups uitstellen naar runtime. Dit werkt zonder dat er een compile-time referentie naar de COM type library nodig is.
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

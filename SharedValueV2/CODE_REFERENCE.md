@@ -1001,3 +1001,11 @@ void notifyRowAdded(const std::wstring& key, const TValue& val) {
 ```
 
 Dit voorkomt deadlocks wanneer een observer in zijn callback opnieuw de store aanroept.
+
+
+## Gerelateerde Documentatie
+
+- [README.md](README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.

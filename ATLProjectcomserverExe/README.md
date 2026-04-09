@@ -450,3 +450,11 @@ Zie [`tests/README.md`](tests/) voor de volledige testdocumentatie.
 # C# .NET 8 integratietests (14 tests)
 cd tests\CSharpNet8Test && dotnet run
 ```
+
+## Gerelateerde Documentatie
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Diepgaande technische architectuur van de Out-of-Process EXE COM Server, iteratie met RPC marshaling en de singleton lifecycle.
+- [INSTALL.md](INSTALL.md) — Installatie-, registratie- en configuratiegids voor de EXE server.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

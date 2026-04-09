@@ -83,3 +83,11 @@ Set sv = CreateObject("ATLProjectcomserver.SharedValue")
 sv.SetValue "Hallo vanuit VBScript!"
 WScript.Echo sv.GetValue()
 ```
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

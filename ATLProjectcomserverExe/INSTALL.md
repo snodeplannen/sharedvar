@@ -42,3 +42,12 @@ cmake --build build --config Release
 .\build\tests\Release\UnitTests.exe
 .\build\tests\Release\StressTest.exe
 ```
+
+
+## Gerelateerde Documentatie
+
+- [README.md](README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Diepgaande technische architectuur van de Out-of-Process EXE COM Server, iteratie met RPC marshaling en de singleton lifecycle.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

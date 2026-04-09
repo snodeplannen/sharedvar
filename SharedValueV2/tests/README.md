@@ -32,3 +32,11 @@ cmake --build build --config Release
 ## Verwachte Output
 
 Beide executables printen `PASS`/`FAIL` per testcase en eindigen met een samenvatting. Een exitcode van `0` betekent dat alle tests geslaagd zijn.
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

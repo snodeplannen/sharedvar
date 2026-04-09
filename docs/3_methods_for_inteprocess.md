@@ -58,3 +58,12 @@ We her-bouwen, registreren, en voeren de originele **Consumer/Producer tests** u
 ## Open Questions
 - Welke van de drie opties geniet jouw voorkeur voor dit project?
 - Is prestatie (lagere latency via `in-process` en `shared memory`) belangrijker dan architecturale netheid (COM EXE / RPC)?
+
+
+## Gerelateerde Documentatie
+
+- [README.md](README.md) — Startpagina voor algemene theorie en project onderzoek.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

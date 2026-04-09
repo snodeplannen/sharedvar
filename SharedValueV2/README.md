@@ -71,3 +71,11 @@ auto val = sharedVal.get(); // "Hello!"
 
 - C++20 compatibele compiler (MSVC v143+, GCC 12+, Clang 14+).
 - CMake ≥ 3.20 (alleen voor standalone tests).
+
+
+## Gerelateerde Documentatie
+
+- [CODE_REFERENCE.md](CODE_REFERENCE.md) — Volledige C++ API referentie en framework documentatie voor SharedValueV2.
+- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.

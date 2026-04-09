@@ -42,3 +42,12 @@ cmake --build build --config Release
 .\build\tests\Release\UnitTests.exe
 .\build\tests\Release\StressTest.exe
 ```
+
+
+## Gerelateerde Documentatie
+
+- [CHANGELOG.md](CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [README.md](ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

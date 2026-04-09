@@ -142,3 +142,11 @@ Results: 14 passed, 0 failed
 | **Data persistence** | Verloren als C# afsluit | Bewaard in server-proces |
 | **Prestatie** | Snel (in-process) | Langzamer (RPC round-trips) |
 | **Cross-process sharing** | ❌ Niet mogelijk | ✅ Meerdere clients, één state |
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../../README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../../../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.

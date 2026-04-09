@@ -200,3 +200,11 @@ cscript //Nologo tests\VBScriptTest\TestConsumerVBS.vbs
 | `TestProducerVBS.vbs` | | ✅ | Legacy DLL | DatasetProxy producer (3 rijen) |
 | `TestProducerSleep.vbs` | | ✅ | Legacy DLL | Langzame producer (10s wacht) |
 | `TestConsumerVBS.vbs` | | ✅ | Legacy DLL | DatasetProxy consumer + paginering |
+
+
+## Gerelateerde Documentatie
+
+- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [README.md](../../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README.md](../../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
