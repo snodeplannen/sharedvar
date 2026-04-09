@@ -25,3 +25,109 @@ SharedValueV2/build/
 # Temporary debugging scripts & logs
 test_*.vbs
 *.log
+
+# C# and .NET
+[Bb]in/
+[Oo]bj/
+*.nupkg
+*.snupkg
+*.rsuser
+TestResults/
+BenchmarkDotNet.Artifacts/
+project.lock.json
+project.assets.json
+*.userprefs
+
+# SharedValueV3_MemMap specific
+SharedValueV3_MemMap/cpp_core/build/
+SharedValueV3_MemMap/flatc_tools/
+flatc.zip
+
+# =========================
+# Security & Secrets
+# =========================
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+appsettings.Development.json
+appsettings.local.json
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+ehthumbs_vista.db
+[Tt]humbs.db
+[Dd]esktop.ini
+
+# =========================
+# IDEs & Editors
+# =========================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+.clangd/
+.cache/
+
+# =========================
+# CMake & C++ Build Caches
+# =========================
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+*.cxx_parameters
+/out/
+*.pch
+*.idb
+*.opendb
+*.sdf
+*.ncb
+*.db
+*.aps
+*.ipch
+.vs*/
+x64/
+x86/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+
+# =========================
+# Python (Scripts/Tools)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+pip-log.txt
+
+# =========================
+# System Dumps
+# =========================
+*.mdmp
+*.dmp
+*.crash
