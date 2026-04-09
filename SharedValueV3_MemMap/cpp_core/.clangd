@@ -1,0 +1,42 @@
+# Clangd configuration for SharedValueV3_MemMap C++ Producer
+# This file tells clangd where to find headers that CMake FetchContent downloads at build time.
+# Without this, the IDE cannot resolve flatbuffers/flatbuffers.h and cascading errors occur.
+#
+# If compile_commands.json exists (from Ninja generator), clangd will use that instead
+# and this file acts as a fallback for flags not covered by the compile database.
+
+CompileFlags:
+  Compiler: clang-cl
+  Add:
+    - "/std:c++20"
+    - "/EHsc"
+    - "-fexceptions"
+    - "-fcxx-exceptions"
+    - "-DNOMINMAX"
+    - "-DWIN32_LEAN_AND_MEAN"
+    - "-D_WIN32"
+    - "-DWIN32"
+    # FlatBuffers headers (downloaded by CMake FetchContent)
+    - "-isystem"
+    - "C:\\csharp\\cursor_com_test\\SharedValueV3_MemMap\\cpp_core\\build\\_deps\\flatbuffers-src\\include"
+    # Project source directory (SharedValueEngine.hpp, dataset_generated.h)
+    - "-I"
+    - "C:\\csharp\\cursor_com_test\\SharedValueV3_MemMap\\cpp_core"
+    # MSVC Standard Library (Community)
+    - "-isystem"
+    - "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.44.35207\\include"
+    # MSVC Standard Library (Enterprise fallback)
+    - "-isystem"
+    - "C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\VC\\Tools\\MSVC\\14.44.35207\\include"
+    # Windows SDK (ucrt, um, shared)
+    - "-isystem"
+    - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt"
+    - "-isystem"
+    - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um"
+    - "-isystem"
+    - "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared"
+
+Diagnostics:
+  UnusedIncludes: None
+  Suppress:
+    - "*fe_expected_compiler_job*"
