@@ -10,6 +10,17 @@ Deze **MemMap Engine** elimineert die overhead volledig:
 2. **0% CPU Callbacks**: Om toch push-notificaties (COM Events of Callbacks) te behouden, leunt deze engine op **Windows Named Events** (`CreateEventW`). De C# listenthread slaapt met 0% CPU footprint totdat de producer data inlaadt en de trigger overhaalt via inter-process communicatie.
 3. **Multi-Process Veilig**: Data corruptie is onmogelijk gemaakt door een actieve **Windows Named Mutex**, afgedwongen in de centrale de `SharedValueEngine` wrapper.
 
+## Levenscyclus & Ontkoppeling
+
+De producer en consumer(s) zijn **volledig ontkoppeld**. Windows kernel objects (MMF, Mutex, Event) leven zolang er minstens **één proces** een handle open heeft. Dit betekent:
+
+- De producer draait **oneindig** en schrijft data ongeacht of er consumers zijn
+- Consumers kunnen **op elk moment** verbinden, data lezen, en weer loskoppelen
+- **Meerdere consumers** tegelijk zijn mogelijk (ieder opent een eigen handle naar dezelfde kernel objects)
+- De producer merkt niets van consumers (fire-and-forget model)
+
+> **Let op:** Als de producer stopt terwijl er geen consumers verbonden zijn, vernietigt Windows alle kernel objects (refcount → 0). Een consumer die daarna start, kan niet meer verbinden. Voor geautomatiseerde tests biedt de producer daarom een `--linger` parameter om de kernel objects langer in leven te houden. Zie [ARCHITECTURE.md](ARCHITECTURE.md#kernel-object-levenscyclus-en-reference-counting) voor de volledige uitleg.
+
 ## Project structuur
 *   `schema/` bevat de `dataset.fbs`. Dit is de FlatBuffers datadefinitie. 
 *   `cpp_core/` is de C++ Native Producer.

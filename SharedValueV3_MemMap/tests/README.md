@@ -34,6 +34,7 @@ MemMapProducer.exe [options]
   --interval MS   Wachttijd in milliseconden tussen updates (default: 2000)
   --rows N        Aantal DataRows per update (default: 1)
   --name NAME     Naam van het gedeelde geheugen (default: MyGlobalDataset)
+  --linger MS     Milliseconden om actief te blijven na de laatste write (default: 5000)
   --help          Toon help
 ```
 
@@ -60,3 +61,12 @@ dotnet run -- [options]
 Bij test 5 (rapid-fire) kan de consumer minder events ontvangen dan de producer verstuurt. Dit is **verwacht gedrag**: het Named Event is geconfigureerd als **auto-reset**. Als de producer twee keer `SetEvent()` aanroept voordat de consumer thread wakker wordt uit `WaitOne()`, worden die twee signalen samengevoegd tot één wake-up.
 
 Dit is by-design: de consumer leest altijd de **meest recente** data uit het geheugenblok, ongeacht hoeveel tussenliggende updates gemist zijn.
+
+## Waarom `--linger` nodig is bij tests
+
+Windows kernel objects (MMF, Mutex, Event) worden vernietigd zodra alle handles gesloten zijn (refcount → 0). Bij geautomatiseerde tests stuurt de producer een beperkt aantal updates (`--count N`) en sluit dan af. Als de consumer op dat moment nog niet verbonden was (bijv. door `dotnet run` JIT-compilatie), zijn de kernel objects al vernietigd.
+
+De `--linger MS` parameter lost dit op: de producer wacht na zijn laatste write nog N milliseconden voordat hij afsluit. Dit geeft de consumer tijd om te verbinden en alle events te ontvangen.
+
+**Bij normaal (productie) gebruik is `--linger` niet nodig.** De producer draait dan oneindig (`--count` wordt niet opgegeven) en de kernel objects bestaan zolang het producer-proces draait. Consumers kunnen op elk moment verbinden en loskoppelen.
+

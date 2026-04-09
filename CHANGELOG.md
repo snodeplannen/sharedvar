@@ -6,8 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - **End-to-End Test Suite**: Implemented `Run-MemMapTests.ps1` with 6 automated test scenarios covering basic data transfer, multi-row datasets, consumer-before-producer retry, connection timeout, rapid-fire stress testing, and boolean field validation.
-- **CLI Arguments**: Extended both producer (`--count`, `--interval`, `--rows`, `--name`) and consumer (`--count`, `--timeout`, `--name`) with command-line arguments for test automation and flexible usage.
+- **CLI Arguments**: Extended both producer (`--count`, `--interval`, `--rows`, `--name`, `--linger`) and consumer (`--count`, `--timeout`, `--name`) with command-line arguments for test automation and flexible usage.
 - **Exit Codes**: Added structured exit codes to the C# consumer (0=success, 2=connection timeout, 3=event timeout) for reliable test orchestration.
+- **Producer Linger**: Added `--linger MS` parameter to keep kernel objects alive after the last write, solving test timing issues where the producer exited before the consumer could connect.
+- **Kernel Object Lifecycle Docs**: Documented Windows kernel reference counting in ARCHITECTURE.md with Mermaid sequence diagrams explaining why producer/consumer decoupling works in production and why `--linger` is needed only for tests.
 - **SharedValueV3 Memory-Mapped Engine**: Designed and implemented a zero-overhead, ultra-fast `SharedValueV3_MemMap` cross-process communication engine using Windows Memory-Mapped Files, fully bypassing all COM/RPC bottlenecks.
 - **FlatBuffers Integration**: Introduced Google FlatBuffers (`dataset.fbs`) for dynamic array nesting, unlimited depth, and forward/backward-compatible schema evolution within shared memory.
 - **Central API Wrappers**: Created `SharedValueEngine.hpp` (C++) and `SharedValueEngine.cs` (C#) to elegantly abstract cross-process mutexes, named events, and memory-mapped I/O behind a single class.

@@ -450,7 +450,89 @@ flowchart TD
     style LOOP fill:#023e8a,stroke:#03045e,color:#caf0f8
 ```
 
+### Kernel Object Levenscyclus en Reference Counting
+
+Windows kernel objects (MMF, Mutex, Event) werken op basis van **reference counting**. Elk proces dat een handle opent verhoogt de interne teller. Zodra alle handles gesloten zijn (refcount → 0), vernietigt Windows het object. Dit heeft drie belangrijke implicaties:
+
+#### Normaal gebruik: Producer draait oneindig, consumers komen en gaan
+
+Dit is het primaire use-case scenario en werkt probleemloos:
+
+```mermaid
+sequenceDiagram
+    participant P as C++ Producer
+    participant K as Kernel Objects<br/>(refcount)
+    participant CA as C# Consumer A
+    participant CB as C# Consumer B
+
+    P->>K: CreateFileMappingW → refcount = 1
+    Note over K: Objects bestaan ✅
+
+    CA->>K: OpenExisting → refcount = 2
+    Note over CA: Leest data via callbacks
+
+    CA->>K: Dispose() → refcount = 1
+    Note over K: Objecten blijven bestaan ✅<br/>Producer heeft nog handles
+
+    CB->>K: OpenExisting → refcount = 2
+    Note over CB: Nieuwe consumer, geen probleem
+
+    CB->>K: Dispose() → refcount = 1
+    Note over K: Objecten blijven bestaan ✅
+
+    Note over P: Producer draait voor altijd...
+```
+
+**Eigenschappen van dit model:**
+- ✅ Producer draait oneindig lang ongeacht of er consumers zijn
+- ✅ Consumers kunnen op elk moment verbinden en weer loskoppelen
+- ✅ Meerdere consumers tegelijk is mogelijk (ieder opent eigen handle)
+- ✅ De producer merkt niets van consumers (fire-and-forget)
+- ✅ Consumer die eerder start dan de producer wacht via retry-loop
+
+#### Problematisch scenario: Producer stopt terwijl er geen consumers zijn
+
+```mermaid
+sequenceDiagram
+    participant P as C++ Producer
+    participant K as Kernel Objects<br/>(refcount)
+    participant C as C# Consumer
+
+    P->>K: CreateFileMappingW → refcount = 1
+    P->>K: WriteData() x3
+    P->>K: ~SharedValueEngine() → refcount = 0
+    Note over K: ⚠️ OBJECTS VERNIETIGD<br/>Geen handles meer open
+
+    C->>K: OpenExisting()
+    Note over C: ❌ FileNotFoundException<br/>Object bestaat niet meer
+```
+
+Dit scenario treedt **alleen** op bij geautomatiseerde tests waar de producer een beperkt aantal updates stuurt (`--count N`) en dan afsluit. Bij normaal gebruik (producer draait oneindig) is dit geen probleem.
+
+#### Oplossing voor tests: `--linger` parameter
+
+De producer ondersteunt een `--linger MS` parameter die hem na de laatste write nog N milliseconden in leven houdt. Dit geeft de consumer tijd om te verbinden en het laatste event te ontvangen:
+
+```mermaid
+sequenceDiagram
+    participant P as C++ Producer
+    participant K as Kernel Objects
+    participant C as C# Consumer
+
+    P->>K: Create → refcount = 1
+    P->>K: WriteData() x3
+    Note over P: --linger 8000<br/>Wacht 8 seconden...
+    C->>K: OpenExisting → refcount = 2
+    C->>K: WaitOne() → Event #3
+    Note over C: Data ontvangen ✅
+    P->>K: Exit → refcount = 1
+    Note over K: Objecten blijven bestaan ✅
+```
+
+> **Samenvatting:** De `--linger` parameter is uitsluitend een testing utility. Bij productiegebruik draait de producer oneindig en is er geen linger nodig.
+
 ---
+
 
 ## 8. Synchronisatiemodel
 
