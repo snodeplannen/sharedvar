@@ -19,3 +19,9 @@ Deze **MemMap Engine** elimineert die overhead volledig:
 ## Hoe te draaien (Testen)
 1. **Open een Terminal:** Navigeer naar `cpp_core\build\Release` (compileer eerst via CMake indien leeg) en start `MemMapProducer.exe`. Deze gooit elke 2 seconden een nieuwe lading FlatBuffer payload in het gedeelde geheugen.
 2. **Open een 2e Terminal:** Navigeer naar `csharp_core` en run `dotnet run`. Je ziet C# nanoseconden later ontwaken, de array uitlezen via pointers, en de data verwerken! (Vrij van alle MSBuild of Nullable warnings).
+
+## Gerelateerde Documentatie
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Uitgebreid architectuurdocument met Mermaid-diagrammen over Memory-Mapped Files, FlatBuffers serialisatie, de synchronisatieprimitieven (Mutex/Event), de producer-consumer levenscyclus, exception hiërarchieën, en de build pipeline.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
+- [CHANGELOG.md](../CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
