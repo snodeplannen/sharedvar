@@ -22,6 +22,11 @@ All notable changes to this project will be documented in this file.
 - **Root README Overhaul**: Updated the root `README.md` to reflect both V2 (COM) and V3 (MemMap) architectures, expanded the directory tree, and consolidated documentation links.
 - **`.gitignore` Expansion**: Comprehensively expanded `.gitignore` for C++ build artefacts (`.pch`, `.idb`, `.sdf`, CMake caches), C# build artefacts (`bin/`, `obj/`, `.nupkg`), IDE files, OS junk, Python tooling, credentials and secrets prevention (`.env`, `.pem`, `.key`, `.pfx`).
 
+### Fixed
+- **Clangd IDE Integration**: Created dedicated `.clangd` config for `SharedValueV3_MemMap/cpp_core/` to resolve FlatBuffers headers downloaded by CMake FetchContent (`build/_deps/flatbuffers-src/include`). Previously caused 20+ cascading "undeclared identifier" errors.
+- **Clangd Harmonisation**: Aligned all three `.clangd` configs (root, ATL, MemMap) with consistent defines (`NOMINMAX`, `WIN32_LEAN_AND_MEAN`), dual Enterprise/Community MSVC and ATL/MFC include fallbacks, and relative project paths for portability.
+- **CMake Compile Database**: Added `CMAKE_EXPORT_COMPILE_COMMANDS ON` to CMakeLists.txt for future Ninja-based builds.
+
 ---
 
 ## [0.1.0] - 2026-04-09
