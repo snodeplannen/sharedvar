@@ -56,6 +56,24 @@ Dit is de **aanbevolen architectuur** voor cross-process data-sharing:
 
 ---
 
+## Opbouw, Werking & Ontwerpprincipes
+
+De opbouw van de EXE server rust op een strakke scheiding tussen enerzijds de **COM/RPC communicatielaag** en anderzijds de **C++20 State Engine** (`SharedValueV2`).
+
+### 1. Waarom een Out-of-Process (EXE) Server?
+Een reguliere COM DLL (In-Process) wordt door Windows rechtstreeks in de geheugenruimte van het aanroepende proces geladen. Hierdoor hebben C#- en VBScript-applicaties in de praktijk ieder hun eigen, geïsoleerde kopie van de data. Door de component om te bouwen naar een **LocalServer32 EXE** treden de Windows COM subsysteem en *LRPC Named Pipes* op als IPC (Inter-Process Communication) verbinding. Het resultaat is dat al die verschillende applicaties via proxies kletsen met **exact hetzelfde fysieke C++ proces**.
+
+### 2. Singleton Gedrag & Data Relaties
+Het centrale knooppunt is de `CSharedValue` klasse. Dankzij de `DECLARE_CLASSFACTORY_SINGLETON` macro genereert ATL slechts één exemplaar van deze klasse binnen de server, ongeacht of er één of honderd clients op verbinden. Tijdens de creatie (`FinalConstruct`) van deze singleton wordt ook meteen een `CDatasetProxy` aangemaakt. Hierdoor bestaat er van de gehele status (zowel de losse gedeelde variabele als de key-value store) effectief maar één waarheid die benaderbaar is voor elke client.
+
+### 3. De Bridging Layer (Type Conversies)
+Daar waar COM vasthoudt aan oude binaire C-standaarden (zoals `BSTR` strings en `SAFEARRAY`s), is de `SharedValueV2` core geschreven in modern C++ (`std::wstring`, `std::vector`, `std::optional`). De implementatiebestanden van de ATL server (`DatasetProxy.cpp`, `SharedValue.cpp`) dienen daarom vooral als vertaalslag: inkomende parameters worden ingelezen, geconverteerd, aan de engine gevoerd, en resultaten worden vice versa in een `SAFEARRAY` of `VARIANT` klaargezet om via RPC correct ge-marshalled te kunnen worden naar de originele aanroepende applicatie.
+
+### 4. Concurrency & Deadlock-preventie
+Bij cross-process event handling kan een gecrashte of enorm trage client normalitair het gehele server-proces (en daarmee alle andere clients) ophouden. Het ontwerp voorkomt dit doordat de `LocalMutexPolicy` (die de interne C++ locks beheert) in *alle* gevallen the callback-lijst kopieert, de lock sluit, en pas *daarna* op de clientside proxies de callbacks trilt. Dit garandeert dat de communicatie-bottleneck nooit de data-integriteit van de engine gijzelt.
+
+---
+
 ## COM Interfaces — Technische Details
 
 ### `ISharedValue` — Gedeelde State Singleton
