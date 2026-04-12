@@ -471,8 +471,10 @@ cd tests\CSharpNet8Test && dotnet run
 
 ## Related Documentation
 
-- [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md) — In-depth technical architecture framing the Out-of-Process EXE COM Server, interlinked RPC marshaling mapping the singleton lifecycle.
-- [INSTALL_EN.md](INSTALL_EN.md) — Setup, registration, and environment overview matching the EXE server.
-- [README_EN.md](../README_EN.md) — Main documentation and starting point of the entire project.
+- [USAGE_EXAMPLES_EN.md](USAGE_EXAMPLES_EN.md) — Clear integration examples mapping C#, Native C++, and VBScript hitting SharedValue & DatasetProxy components.
+- [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md) — Comprehensive technical design layouts encompassing explicit class diagrams.
+- [INSTALL_EN.md](INSTALL_EN.md) — Base system thresholds, deployment steps, deep compiler instructions, and robust WiX Toolset dependencies.
+- [tests/README_EN.md](tests/README_EN.md) — Aggressive Unit validations alongside Integration testing matrices.
+- [../README_EN.md](../README_EN.md) — Governing overarching root structure documentation metrics.
 - [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
 - [README_EN.md](../SharedValueV2/README_EN.md) — Introductory overview guiding the SharedValueV2 C++20 engine.

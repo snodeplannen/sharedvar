@@ -471,8 +471,10 @@ cd tests\CSharpNet8Test && dotnet run
 
 ## Gerelateerde Documentatie
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Diepgaande technische architectuur van de Out-of-Process EXE COM Server, iteratie met RPC marshaling en de singleton lifecycle.
-- [INSTALL.md](INSTALL.md) — Installatie-, registratie- en configuratiegids voor de EXE server.
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
+- [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) — Duidelijke C#, C++ en VBScript integratievoorbeelden van SharedValue en DatasetProxy.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Diepgaand technisch ontwerp en klassendiagrammen.
+- [INSTALL.md](INSTALL.md) — System requirements, registratie, build-instructies en WiX MSI configuratie.
+- [tests/README.md](tests/README.md) — Unit en Integratie testing details.
+- [../README.md](../README.md) — Overkoepelende project documentatie.
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
 - [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
