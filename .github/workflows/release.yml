@@ -1,0 +1,97 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger strictly on tags like v1.0.0
+
+jobs:
+  build_release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC & MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build ATL COM Solutions
+        run: |
+          msbuild ATLProjectcomserver.sln /p:Configuration=Release /p:Platform=x64
+          
+      - name: Generate Flatbuffers Schema
+        run: |
+          cd SharedValueV3_MemMap
+          .\build_schema.ps1
+
+      - name: Build SharedValueV3 (C++)
+        run: |
+          cd SharedValueV3_MemMap\cpp_core
+          cmake -B build
+          cmake --build build --config Release
+
+      - name: Build SharedValueV3 (C#)
+        run: |
+          cd SharedValueV3_MemMap\csharp_core
+          dotnet build -c Release
+
+      - name: Build WiX Installer
+        run: |
+          cd SharedValueInstaller
+          dotnet build -c Release
+
+      - name: Package Developer Bundle
+        run: |
+          # Create staging directory
+          mkdir developer_bundle
+          mkdir developer_bundle\ATLProjectcomserverExe
+          mkdir developer_bundle\ATLProjectcomserverLegacy
+          mkdir developer_bundle\SharedValueV2_Headers
+          mkdir developer_bundle\SharedValueV3_MemMap_Native
+          mkdir developer_bundle\SharedValueV3_MemMap_CSharp
+          
+          # Copy ATL components (EXE + PDB + TLB + Source generated Headers)
+          xcopy /Y ATLProjectcomserverExe\x64\Release\*.exe developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y ATLProjectcomserverExe\x64\Release\*.pdb developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y ATLProjectcomserverExe\x64\Release\*.tlb developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y ATLProjectcomserverExe\*_i.h developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y ATLProjectcomserverExe\*_i.c developer_bundle\ATLProjectcomserverExe\
+          
+          # Copy Legacy DLL components
+          xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.dll developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.tlb developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.pdb developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y ATLProjectcomserverLegacy\*_i.h developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y ATLProjectcomserverLegacy\*_i.c developer_bundle\ATLProjectcomserverLegacy\
+          
+          # Copy SharedValueV2 Headers
+          xcopy /Y /S SharedValueV2\include\* developer_bundle\SharedValueV2_Headers\
+          
+          # Copy SharedValueV3 artifacts
+          xcopy /Y SharedValueV3_MemMap\cpp_core\build\Release\*.exe developer_bundle\SharedValueV3_MemMap_Native\
+          xcopy /Y SharedValueV3_MemMap\cpp_core\build\Release\*.pdb developer_bundle\SharedValueV3_MemMap_Native\
+          xcopy /Y /S SharedValueV3_MemMap\csharp_core\bin\Release\net8.0\* developer_bundle\SharedValueV3_MemMap_CSharp\
+          
+          # Zip boundaries
+          Compress-Archive -Path developer_bundle\* -DestinationPath Developer_Bundle.zip
+          
+      - name: Package Installer
+        run: |
+          Compress-Archive -Path SharedValueInstaller\bin\x64\Release\*.msi -DestinationPath Installer.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Developer_Bundle.zip
+            Installer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
