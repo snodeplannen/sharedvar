@@ -1,0 +1,119 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="SharedValue COM Server" Manufacturer="SharedValue Project" Version="0.1.0.0" UpgradeCode="e38f1dc1-1234-4567-890a-abcdef123456">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <ui:WixUI Id="WixUI_InstallDir" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="ComServerComponents" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SharedValue COM Server" />
+    </StandardDirectory>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="ComServerComponents" Directory="INSTALLFOLDER">
+      <Component Id="comserver_exe" Guid="72ac2b20-1a77-4b72-9b2f-7d12f3bc8a41">
+        <File Id="exe_file" Source="..\ATLProjectcomserverExe\x64\Release\ATLProjectcomserver.exe" KeyPath="yes" />
+
+        <!-- AppID Registration -->
+        <RegistryKey Root="HKCR" Key="AppID\{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}">
+          <RegistryValue Type="string" Value="ATLProjectcomserver" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="AppID\ATLProjectcomserver.exe">
+          <RegistryValue Name="AppID" Type="string" Value="{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}" />
+        </RegistryKey>
+
+        <!-- 1. MathOperations Class -->
+        <RegistryKey Root="HKCR" Key="CLSID\{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}">
+          <RegistryValue Type="string" Value="MathOperations Class" />
+          <RegistryValue Name="AppID" Type="string" Value="{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}\LocalServer32">
+          <RegistryValue Type="string" Value="[#exe_file]" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}\ProgID">
+          <RegistryValue Type="string" Value="ATLProjectcomserverExe.MathOperations.1" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.MathOperations.1">
+          <RegistryValue Type="string" Value="MathOperations Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.MathOperations.1\CLSID">
+          <RegistryValue Type="string" Value="{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}" />
+        </RegistryKey>
+
+        <!-- 2. DatasetProxy Class -->
+        <RegistryKey Root="HKCR" Key="CLSID\{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}">
+          <RegistryValue Type="string" Value="DatasetProxy Class" />
+          <RegistryValue Name="AppID" Type="string" Value="{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}\LocalServer32">
+          <RegistryValue Type="string" Value="[#exe_file]" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}\ProgID">
+          <RegistryValue Type="string" Value="ATLProjectcomserverExe.DatasetProxy.1" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.DatasetProxy.1">
+          <RegistryValue Type="string" Value="DatasetProxy Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.DatasetProxy.1\CLSID">
+          <RegistryValue Type="string" Value="{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}" />
+        </RegistryKey>
+
+        <!-- 3. SharedValue Class -->
+        <RegistryKey Root="HKCR" Key="CLSID\{A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF}">
+          <RegistryValue Type="string" Value="SharedValue Class" />
+          <RegistryValue Name="AppID" Type="string" Value="{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF}\LocalServer32">
+          <RegistryValue Type="string" Value="[#exe_file]" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF}\ProgID">
+          <RegistryValue Type="string" Value="ATLProjectcomserverExe.SharedValue.1" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.SharedValue.1">
+          <RegistryValue Type="string" Value="SharedValue Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.SharedValue.1\CLSID">
+          <RegistryValue Type="string" Value="{A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF}" />
+        </RegistryKey>
+
+        <!-- 4. SharedValueCallback Class -->
+        <RegistryKey Root="HKCR" Key="CLSID\{6818dd57-f9e6-45be-aa20-ea4b5b658af3}">
+          <RegistryValue Type="string" Value="SharedValueCallback Class" />
+          <RegistryValue Name="AppID" Type="string" Value="{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{6818dd57-f9e6-45be-aa20-ea4b5b658af3}\LocalServer32">
+          <RegistryValue Type="string" Value="[#exe_file]" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{6818dd57-f9e6-45be-aa20-ea4b5b658af3}\ProgID">
+          <RegistryValue Type="string" Value="ATLProjectcomserverExe.SharedValueCallback.1" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.SharedValueCallback.1">
+          <RegistryValue Type="string" Value="SharedValueCallback Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="ATLProjectcomserverExe.SharedValueCallback.1\CLSID">
+          <RegistryValue Type="string" Value="{6818dd57-f9e6-45be-aa20-ea4b5b658af3}" />
+        </RegistryKey>
+
+        <!-- TypeLib Registration -->
+        <!-- Because this is an Exe COM Server, TypeLib is typically embedded in the EXE resources. Therefore win64 pointer points to EXE -->
+        <RegistryKey Root="HKCR" Key="TypeLib\{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}\1.0\0\win64">
+          <RegistryValue Type="string" Value="[#exe_file]" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="TypeLib\{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}\1.0">
+          <RegistryValue Type="string" Value="ATLProjectcomserverExe 1.0 Type Library" />
+        </RegistryKey>
+
+      </Component>
+
+      <Component Id="stop_server_exe" Guid="02eaedb8-f1c5-449e-bca8-47bc86e41b2c">
+        <File Id="stop_exe_file" Source="..\ATLProjectcomserverExe\stop_server.exe" KeyPath="yes" />
+      </Component>
+      
+    </ComponentGroup>
+  </Fragment>
+</Wix>
