@@ -55,6 +55,8 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht en all
 ## Gerelateerde Documentatie
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Uitgebreid architectuurdocument met Mermaid-diagrammen over Memory-Mapped Files, FlatBuffers serialisatie, de synchronisatieprimitieven (Mutex/Event), de producer-consumer levenscyclus, exception hiërarchieën, en de build pipeline.
+- [INSTALL.md](INSTALL.md) — Instructies voor het configureren en bouwen van de omgeving.
+- [CODE_REFERENCE.md](CODE_REFERENCE.md) — Overzicht van de belangrijkste bestanden, componenten en klassen.
 - [tests/README.md](tests/README.md) — Testoverzicht, CLI-argumenten, en uitleg over testscenario's.
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
 - [CHANGELOG.md](../CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.

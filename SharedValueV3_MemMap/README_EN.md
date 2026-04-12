@@ -55,6 +55,8 @@ Browse [`tests/README_EN.md`](tests/README_EN.md) targeting the fully exhaustive
 ## Related Documentation
 
 - [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md) — Expansive architecture documentation plotting Mermaid-schematics charting Memory-Mapped Files, FlatBuffers serialization, synchronous structures (Mutex/Event), producer-consumer pacing loops, hierarchical exception mapping, flanked via the pipeline build metrics.
+- [INSTALL_EN.md](INSTALL_EN.md) — Instructions for building and configuring the environment.
+- [CODE_REFERENCE_EN.md](CODE_REFERENCE_EN.md) — Overview of the key components, files, and classes.
 - [tests/README_EN.md](tests/README_EN.md) — Suite overview tracking, CLI modifier metrics, expanding upon scenario details.
 - [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
 - [CHANGELOG_EN.md](../CHANGELOG_EN.md) — Comprehensive log reflecting overarching amendments adjoining release notes.
