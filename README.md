@@ -169,19 +169,26 @@ V4 and V5 build upon the ultra-fast foundations of V3, whilst resolving specific
 
 ### Decision Tree
 
-Do you need cross-process data sharing?
-├── No → Legacy DLL (fastest, simplest)
-└── Yes
-    ├── Do you need complex RPC in many languages with legacy Office macros?
-    │   └── Yes → EXE Server + SharedValueV2
-    └── Do you require zero-overhead shared memory?
-        ├── Is your schema dynamic or runtime-determined?
-        │   └── Yes → SharedValueV5 (Dynamic Schema)
-        └── Are data types and tables determined ahead of time?
-            ├── Do you solely require push-data? (Producer→Consumer)
-            │   └── Yes → SharedValueV3 (MemMap)
-            └── Do you require push & reply traffic? (Bidirectional)
-                └── Yes → SharedValueV4 (Dual-Channel)
+```mermaid
+flowchart TD
+    Q1{"Do you need cross-process<br/>data sharing?"}
+    
+    Q1 -- No --> DLL["Legacy DLL<br/>(Fastest, simplest)"]
+    Q1 -- Yes --> Q2{"Do you need complex RPC<br/>in many languages with<br/>legacy Office macros?"}
+    
+    Q2 -- Yes --> V2["EXE Server + SharedValueV2<br/>(COM/RPC)"]
+    Q2 -- No, need zero-overhead<br/>shared memory --> Q3{"Is your schema dynamic<br/>or runtime-determined?"}
+    
+    Q3 -- Yes --> V5["SharedValueV5<br/>(Dynamic Schema)"]
+    Q3 -- No, data types<br/>determined ahead of time --> Q4{"Do you solely require<br/>push-data? (P2C)"}
+    
+    Q4 -- Yes --> V3["SharedValueV3<br/>(MemMap Unidirectional)"]
+    Q4 -- No, require push<br/>& reply traffic --> V4["SharedValueV4<br/>(Dual-Channel Bidirectional)"]
+    
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef endNode fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    
+    class DLL,V2,V3,V4,V5 endNode;
 ```
 
 

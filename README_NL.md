@@ -169,19 +169,26 @@ V4 en V5 bouwen voort op de ultra-snelle fundamenten van V3, maar lossen specifi
 
 ### Beslisboom
 
-Heb je cross-process data sharing nodig?
-├── Nee → Legacy DLL (snelst, simpelst)
-└── Ja
-    ├── Heb je complexe RPC in veel talen nodig met legacy Office macro's?
-    │   └── Ja → EXE Server + SharedValueV2
-    └── Heb je zero-overhead gedeeld geheugen nodig?
-        ├── Is je schema dynamisch of runtime-bepaald?
-        │   └── Ja → SharedValueV5 (Dynamic Schema)
-        └── Liggen datatypes en tabellen vooraf vast?
-            ├── Heb je uitsluitend push-data nodig? (Producer→Consumer)
-            │   └── Ja → SharedValueV3 (MemMap)
-            └── Heb je push & antwoord-verkeer nodig? (Bidirectioneel)
-                └── Ja → SharedValueV4 (Dual-Channel)
+```mermaid
+flowchart TD
+    Q1{"Heb je cross-process<br/>data sharing nodig?"}
+    
+    Q1 -- Nee --> DLL["Legacy DLL<br/>(Snelst, simpelst)"]
+    Q1 -- Ja --> Q2{"Heb je complexe RPC<br/>in veel talen nodig met<br/>oude Office macro's?"}
+    
+    Q2 -- Ja --> V2["EXE Server + SharedValueV2<br/>(COM/RPC)"]
+    Q2 -- Nee, heb zero-overhead<br/>gedeeld geheugen nodig --> Q3{"Is je schema dynamisch<br/>of programmatisch bepaald?"}
+    
+    Q3 -- Ja --> V5["SharedValueV5<br/>(Dynamisch Schema)"]
+    Q3 -- Nee, typen en tabellen<br/>liggen vooraf vast --> Q4{"Heb je uitsluitend<br/>push-data nodig? (P2C)"}
+    
+    Q4 -- Ja --> V3["SharedValueV3<br/>(MemMap Unidirectioneel)"]
+    Q4 -- Nee, push &<br/>antwoord-verkeer nodig --> V4["SharedValueV4<br/>(Dual-Channel Bidirectioneel)"]
+    
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef endNode fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    
+    class DLL,V2,V3,V4,V5 endNode;
 ```
 
 

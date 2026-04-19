@@ -127,8 +127,8 @@ graph TD
     CS --> CSPROJ["csharp_core.csproj"]
 
     ROOT --> BUILD_PS1["build_schema.ps1<br/><i>Autonomous flatc logic driving codegen</i>"]
-    ROOT --> README["README_EN.md"]
-    ROOT --> ARCH["ARCHITECTURE_EN.md"]
+    ROOT --> README["README.md"]
+    ROOT --> ARCH["ARCHITECTURE.md"]
 
     style ROOT fill:#264653,stroke:#2a9d8f,color:#e9c46a
     style SCHEMA fill:#e76f51,stroke:#f4a261,color:#fff
@@ -762,6 +762,7 @@ flowchart TB
 
 ## Related Documentation
 
-- [README_EN.md](README_EN.md) — Baseline introduction mechanics charting core structures beside quickstart execution guide procedures inherently.
-- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Overarching architecture document defining mapping variables tracking generalized COM Server project logic trees completely.
-- [README_EN.md](../SharedValueV2/README_EN.md) — Tracking foundational COM-based architecture mapping the overarching SharedValueV2 C++20 engine operations flawlessly.
+- [README.md](README.md) — Baseline introduction mechanics charting core structures beside quickstart execution guide procedures inherently.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Overarching architecture document defining mapping variables tracking generalized COM Server project logic trees completely.
+- [README.md](../SharedValueV2/README.md) — Tracking foundational COM-based architecture mapping the overarching SharedValueV2 C++20 engine operations flawlessly.
+

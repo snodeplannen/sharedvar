@@ -1,4 +1,4 @@
-﻿# Technical Architecture: ATLProjectcomserverExe
+# Technical Architecture: ATLProjectcomserverExe
 
 ## Table of Contents
 
@@ -844,8 +844,8 @@ mindmap
 
 ## Related Documentation
 
-- [README_EN.md](README_EN.md) — User guide and overview of the EXE COM Server variant.
-- [INSTALL_EN.md](INSTALL_EN.md) — Setup, registration, and configuration guide for the EXE server.
-- [README_EN.md](../README_EN.md) — Main documentation and starting point of the entire project.
-- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
-- [README_EN.md](../SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.
+- [README.md](README.md) — User guide and overview of the EXE COM Server variant.
+- [INSTALL.md](INSTALL.md) — Setup, registration, and configuration guide for the EXE server.
+- [README.md](../README.md) — Main documentation and starting point of the entire project.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — Main architecture document covering the entire COM Server project tree.
+- [README.md](../SharedValueV2/README.md) — Introduction and overview of the SharedValueV2 C++20 engine.

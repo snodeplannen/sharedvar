@@ -2,7 +2,7 @@
 
 > **Documentation Scope:** This document specifically describes the architecture of **SharedValueV2**, the COM/RPC-based Out-of-Process Server.
 > For the architecture of the newer Memory-Mapped generations, see:
-> - [SharedValueV3 MemMap Architecture](SharedValueV3_MemMap/ARCHITECTURE_EN.md) (Unidirectional FlatBuffers)
+> - [SharedValueV3 MemMap Architecture](SharedValueV3_MemMap/ARCHITECTURE.md) (Unidirectional FlatBuffers)
 > - [SharedValueV4 Architecture](SharedValueV4/ARCHITECTURE_NL.md) (Bidirectional FlatBuffers)
 > - [SharedValueV5 Architecture](SharedValueV5/ARCHITECTURE_NL.md) (Dynamic Schema IPC)
 ## Table of Contents
@@ -849,8 +849,9 @@ mindmap
 
 ## Related Documentation
 
-- [CHANGELOG_EN.md](CHANGELOG_EN.md) — Overview of all modifications and release notes.
-- [README_EN.md](README_EN.md) — Primary documentation and genesis of the entire project.
-- [INSTALL_EN.md](INSTALL_EN.md) — Global compilation and installation instructions.
-- [README_EN.md](ATLProjectcomserverExe/README_EN.md) — User guide and overview for the EXE COM Server variant.
-- [README_EN.md](SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.
+- [CHANGELOG.md](CHANGELOG.md) — Overview of all modifications and release notes.
+- [README.md](README.md) — Primary documentation and genesis of the entire project.
+- [INSTALL.md](INSTALL.md) — Global compilation and installation instructions.
+- [README.md](ATLProjectcomserverExe/README.md) — User guide and overview for the EXE COM Server variant.
+- [README.md](SharedValueV2/README.md) — Introduction and overview of the SharedValueV2 C++20 engine.
+
