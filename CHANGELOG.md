@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - Unreleased
+
+### Changed
+- **Documentation Standardization**: Standardized project language conventions strictly to English as the primary (`.md`) and Dutch as the secondary (`_NL.md`) fallback, enforcing this via automated rename scripts across the entire repository.
+- **Root Architecture Overhaul**: Refactored the core `ARCHITECTURE.md` (and NL mapping) out of legacy V2 specifications into a high-level routing document cleanly comparing all IPC generations (V2 to V5).
+- **Mermaid Visualizations**: Enriched the root `README.md` and all Architecture hubs with extensive Mermaid visualizations (decision trees, multi-channel flowcharts, sequence diagrams, memory block maps) to articulate IPC deviations.
+- **Dutch File Cleanup**: Corrected inconsistently named Dutch placeholder files (e.g., translating `implementatieplan_NL.md` to `implementation_plan_NL.md`) and purged trailing `_EN.md` hyperlink remnants.
+
+---
+
 ## [0.3.0] - 2026-04-19
 
 ### Added
