@@ -54,7 +54,7 @@ if (Test-Path "$v5Root\python_ext") {
     & $uvTool run --with setuptools --with pybind11 python setup.py build_ext --inplace
     
     # Grab whatever .pyd was generated (like sharedvalue5.cp312-win_amd64.pyd or just sharedvalue5.pyd)
-    $pydFiles = Get-ChildItem -Filter "*.pyd"
+    $pydFiles = @(Get-ChildItem -Filter "*.pyd" -Recurse | Where-Object { $_.FullName -notmatch "\\\.venv\\" -and $_.FullName -notmatch "\\\.tox\\" })
     if ($pydFiles.Count -gt 0) {
         # Rename it strictly to sharedvalue5.pyd to match the WiX expectations
         Copy-Item $pydFiles[0].FullName "$stagingDir\python\sharedvalue5.pyd"
