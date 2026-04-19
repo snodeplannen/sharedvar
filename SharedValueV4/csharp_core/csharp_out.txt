@@ -1,0 +1,13 @@
+[Consumer] Starting MemMap Dual-Channel Client...
+[Consumer] Config: name=MyGlobalDataset count=1
+[Consumer] Waiting for C++ Producer to initialize the shared memory...
+[Engine] Waiting for primary host Ready Event: Global\MyGlobalDataset_P2C_Ready
+[Engine] Waiting for primary host Ready Event: Global\MyGlobalDataset_C2P_Ready
+
+[Consumer] Successfully connected to Dual-Channel MMFs!
+
+--- Event #1 Received from C++ ---
+  API Version: 1.0.0
+[Consumer] Replied to C++ with acknowledge counter 1
+[Consumer] Received 1/1 events. Auto-exiting.
+[Consumer] Exiting. Total events received: 1
