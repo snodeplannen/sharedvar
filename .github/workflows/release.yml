@@ -23,11 +23,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
       - name: Build ATL COM Solutions
         run: |
           msbuild ATLProjectcomserver.sln /p:Configuration=Release /p:Platform=x64
           
-      - name: Generate Flatbuffers Schema
+      - name: Generate Flatbuffers Schema V3
         run: |
           cd SharedValueV3_MemMap
           .\build_schema.ps1
@@ -43,10 +51,31 @@ jobs:
           cd SharedValueV3_MemMap\csharp_core
           dotnet build -c Release
 
-      - name: Build WiX Installer
+      - name: Generate Flatbuffers Schema V4
+        run: |
+          cd SharedValueV4
+          .\build_schema.ps1
+
+      - name: Build SharedValueV4 (C++)
+        run: |
+          cd SharedValueV4\cpp_core
+          cmake -B build
+          cmake --build build --config Release
+
+      - name: Build SharedValueV4 (C#)
+        run: |
+          cd SharedValueV4\csharp_core
+          dotnet build -c Release
+
+      - name: Build V2 WiX Installer
         run: |
           cd SharedValueInstaller
           dotnet build -c Release
+
+      - name: Build V5 SDK & WiX Installer
+        run: |
+          cd SharedValueV5Installer
+          .\build_sdk_installer.ps1
 
       - name: Package Developer Bundle
         run: |
@@ -57,6 +86,9 @@ jobs:
           mkdir developer_bundle\SharedValueV2_Headers
           mkdir developer_bundle\SharedValueV3_MemMap_Native
           mkdir developer_bundle\SharedValueV3_MemMap_CSharp
+          mkdir developer_bundle\SharedValueV4_Native
+          mkdir developer_bundle\SharedValueV4_CSharp
+          mkdir developer_bundle\SharedValueV5_SDK
           
           # Copy ATL components (EXE + PDB + TLB + Source generated Headers)
           xcopy /Y ATLProjectcomserverExe\x64\Release\*.exe developer_bundle\ATLProjectcomserverExe\
@@ -79,19 +111,24 @@ jobs:
           xcopy /Y SharedValueV3_MemMap\cpp_core\build\Release\*.exe developer_bundle\SharedValueV3_MemMap_Native\
           xcopy /Y SharedValueV3_MemMap\cpp_core\build\Release\*.pdb developer_bundle\SharedValueV3_MemMap_Native\
           xcopy /Y /S SharedValueV3_MemMap\csharp_core\bin\Release\net8.0\* developer_bundle\SharedValueV3_MemMap_CSharp\
+
+          # Copy SharedValueV4 artifacts
+          xcopy /Y SharedValueV4\cpp_core\build\Release\*.exe developer_bundle\SharedValueV4_Native\
+          xcopy /Y SharedValueV4\cpp_core\build\Release\*.pdb developer_bundle\SharedValueV4_Native\
+          xcopy /Y /S SharedValueV4\csharp_core\bin\Release\net8.0\* developer_bundle\SharedValueV4_CSharp\
+          
+          # Copy SharedValueV5 staging SDK artifacts
+          xcopy /Y /S SharedValueV5Installer\staging\* developer_bundle\SharedValueV5_SDK\
           
           # Zip boundaries
           Compress-Archive -Path developer_bundle\* -DestinationPath Developer_Bundle.zip
           
-      - name: Package Installer
-        run: |
-          Compress-Archive -Path SharedValueInstaller\bin\x64\Release\*.msi -DestinationPath Installer.zip
-
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             Developer_Bundle.zip
-            Installer.zip
+            SharedValueInstaller\bin\x64\Release\*.msi
+            SharedValueV5Installer\bin\x64\Release\*.msi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
