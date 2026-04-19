@@ -13,7 +13,7 @@ using namespace SharedValueV5;
 
 int main(int argc, char* argv[]) {
     std::wstring channelName = L"V5Demo";
-    int maxUpdates = 0; // 0 = infinite
+    int maxUpdates = 15; // default 15 iterations
     int delayMs = 2000; // Initial delay for consumers to connect
 
     // Parse args
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--help") {
             std::cout << "Usage: cpp_producer [options]\n"
                       << "  --name NAME    Channel name (default: V5Demo)\n"
-                      << "  --count N      Exit after N updates (default: infinite)\n"
+                      << "  --count N      Exit after N updates (default: 15)\n"
                       << "  --help         Show this help\n";
             return 0;
         }
