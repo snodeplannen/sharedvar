@@ -54,6 +54,8 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht en all
 
 ## Gerelateerde Documentatie
 
+- [SCHEMA_HANDLEIDING_NL.md](SCHEMA_HANDLEIDING_NL.md) — **Hoe de dataset-structuur wordt bepaald.** Uitleg over het `.fbs` schema, codegeneratie pipeline, beschikbare datatypes, en regels voor schema-evolutie.
+- [USAGE_NL.md](USAGE_NL.md) — Praktijkvoorbeelden in C++, C#, Python en VBScript (incl. COM wrapper, Excel VBA, bidirectioneel).
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Uitgebreid architectuurdocument met Mermaid-diagrammen over Memory-Mapped Files, FlatBuffers serialisatie, de synchronisatieprimitieven (Mutex/Event), de producer-consumer levenscyclus, exception hiërarchieën, en de build pipeline.
 - [INSTALL.md](INSTALL.md) — Instructies voor het configureren en bouwen van de omgeving.
 - [CODE_REFERENCE.md](CODE_REFERENCE.md) — Overzicht van de belangrijkste bestanden, componenten en klassen.
