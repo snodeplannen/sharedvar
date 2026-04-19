@@ -131,3 +131,9 @@ pip-log.txt
 *.mdmp
 *.dmp
 *.crash
+
+# Python
+.venv/
+build/
+*.pyd
+__pycache__/
