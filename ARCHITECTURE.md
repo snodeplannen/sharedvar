@@ -33,8 +33,25 @@ graph TD
 
 In this architecture, a centralized `ATLProjectcomserver.exe` runs as a Windows background process. All clients communicate with this server using COM Interface Pointers (`ISharedValue`, `IDatasetProxy`). Because multiple processes access the same C++ singleton, deep C++ `std::mutex` locking ensures thread-safety.
 
-*   **Pros:** Easy to use from script languages like VBScript. Rich object-oriented API.
-*   **Cons:** Very slow per-call overhead (~1-10 μs) due to RPC marshaling. Requires `regsvr32` / administrative installation.
+```mermaid
+sequenceDiagram
+    participant Client as Client (e.g. VBScript)
+    participant RPC as Windows RPC (Named Pipes)
+    participant Server as COM Server EXE
+    participant Eng as C++ SharedValue Engine
+
+    Client->>RPC: SetValue(VARIANT) - Marshaling
+    Note over RPC: Very Slow Kernel Transition (~1-10 μs)
+    RPC->>Server: LRPC Payload Received
+    Server->>Eng: std::lock_guard -> m_value = x
+    Eng-->>Server: HRESULT S_OK
+    Server-->>RPC: Unmarshaling
+    RPC-->>Client: Return Control
+```
+
+*   **The Difference:** V2 uses **marshaling**. Data is serialized, pushed through an IPC channel, and deserialized on the other side. This is comparatively slow but incredibly stable and effortlessly invoked from scripting languages via simple object orientation.
+*   **Pros:** Easy to use from script languages like VBScript. Rich object-oriented API and robust error translation (exceptions mapped to HRESULTs).
+*   **Cons:** Very slow per-call overhead due to RPC marshaling. Requires `regsvr32` / administrative installation (Registry pollution).
 *   **Deep Dive:** [SharedValueV2 Architecture](SharedValueV2/ARCHITECTURE.md)
 
 ### 2. SharedValueV3 (MemMap): Unidirectional FlatBuffers
@@ -43,8 +60,35 @@ In this architecture, a centralized `ATLProjectcomserver.exe` runs as a Windows 
 
 To eliminate the COM bottleneck, V3 writes direct binary data (using Google FlatBuffers) into a shared Windows kernel page. Consumers memory-map this exact same page into their own process. They receive notifications via a Windows Event Handle when new data arrives, waking their threads with 0% idle CPU overhead.
 
-*   **Pros:** Nanosecond latency. No serialization overhead.
-*   **Cons:** Unidirectional (Producer -> Consumer). Schema must be compiled into C++ and C# beforehand via `flatc`.
+```mermaid
+flowchart LR
+    subgraph Producer [Producer Process (C++)]
+        FB[Build FlatBuffer] --> L1(Lock Named Mutex)
+        L1 --> W[MemCpy into MMF]
+        W --> U1(Unlock Mutex)
+        U1 --> E(Set Named Event)
+    end
+    
+    subgraph Shared [Windows OS Kernel]
+        MMF[(Memory-Mapped File<br/>10 MB)]
+    end
+    
+    subgraph Consumer [Consumer Process (C#)]
+        E -.->|Wakes Sleeping Thread!| R1(WaitOne Event)
+        R1 --> C2(Lock Named Mutex)
+        MMF -.->|Memory Pointer| R2[ReadArray from MMF]
+        C2 --> R2
+        R2 --> C3(Unlock Mutex)
+        C3 --> R3[Parse FlatBuffer]
+    end
+    
+    W -.-> MMF
+    style MMF fill:#1b4332,color:#fff
+```
+
+*   **The Difference:** There is **no data transmission over a channel**. Both the producer and consumer inspect the exact same electron states in physical RAM (via virtual paging). The event mechanism simply triggers the evaluation. Consequently, latency plummets to nanoseconds.
+*   **Pros:** Nanosecond latency (~50 ns). No string/object serialization overhead heavily leveraging Google FlatBuffers zero-copy traits.
+*   **Cons:** Unidirectional (Producer -> Consumer strictly). Schema is absolutely frozen due to compile-time code generation (`flatc`).
 *   **Deep Dive:** [SharedValueV3 Architecture](SharedValueV3_MemMap/ARCHITECTURE.md)
 
 ### 3. SharedValueV4: Dual-Channel Bidirectional
@@ -53,8 +97,38 @@ To eliminate the COM bottleneck, V3 writes direct binary data (using Google Flat
 
 V4 upgrades V3 by introducing a return channel. It creates a symmetrical system where both sides can act as Producer and Consumer. It uses a robust "Ready Event" handshake algorithm to ensure no process writes to memory before the other is listening.
 
-*   **Pros:** Real-time bidirectional IPC suitable for High-Frequency Trading (>100k msg/sec).
-*   **Cons:** Schema still requires `flatc` ahead-of-time compilation.
+```mermaid
+graph TD
+    subgraph Host [Host Application]
+        direction TB
+        HW[Write P2C]
+        HR[Read C2P]
+    end
+
+    subgraph Kernel [2x Memory-Mapped Files]
+        P2C[(P2C_Map<br/>Host -> Client)]
+        C2P[(C2P_Map<br/>Client -> Host)]
+    end
+
+    subgraph Client [Client Application]
+        direction TB
+        CR[Read P2C]
+        CW[Write C2P]
+    end
+
+    HW -->|Mutex locked| P2C
+    P2C -.->|Event 1 triggers| CR
+    
+    CW -->|Mutex locked| C2P
+    C2P -.->|Event 2 triggers| HR
+    
+    style P2C fill:#2a9d8f,color:#fff
+    style C2P fill:#e76f51,color:#fff
+```
+
+*   **The Difference:** Where V3 mimics a simple 'fire & forget' hose, V4 behaves akin to a blisteringly fast full-duplex TCP socket (but implemented purely across physical RAM limits). This yields absolute perfection governing logic loops requiring rapid High-Frequency responses.
+*   **Pros:** Real-time bidirectional IPC uniquely suitable for High-Frequency Trading and closed-loop control systems.
+*   **Cons:** Architecture demands mapping twin memory channels concurrently (raising structural complexity slightly). Schemas still demand pre-compilation via `flatc`.
 *   **Deep Dive:** [SharedValueV4 Architecture](SharedValueV4/ARCHITECTURE.md)
 
 ### 4. SharedValueV5: Dynamic Schema "DataTable" IPC
@@ -63,8 +137,35 @@ V4 upgrades V3 by introducing a return channel. It creates a symmetrical system 
 
 V5 solves the FlatBuffer compile-time restriction. It allows any language (even VBScript via an underlying C# COM wrapper) to dynamically define table columns at runtime (e.g., `AddColumn("Temperature", Double)`). The data structure is serialized into a self-describing binary format directly in memory. Consumers parse the header to discover the schema without needing pre-compiled code.
 
-*   **Pros:** Completely dynamic. Excellent wrapper support for scripting languages. Backward-compatible schema evolution.
-*   **Cons:** Marginally slower than V3/V4 due to runtime index lookup (~50-100ns per read).
+```mermaid
+block-beta
+    columns 1
+    
+    block:header
+        columns 2
+        H1["16-byte Master Header (Magic + Version)"]
+        H2["Table Directory (Offset Pointers)"]
+    end
+    
+    block:tables
+        columns 3
+        T1["Table 1: 'Config'<br/>(Schema Headers + Binary Rows)"]
+        T2["Table 2: 'Sensors'<br/>(Schema Headers + Binary Rows)"]
+        T3["Table N...<br/>..."]
+    end
+    
+    block:strings
+        S["Variable String & Blob Pool (Mitigates memory fragmentation entirely)"]
+    end
+
+    style header fill:#264653,color:#fff
+    style tables fill:#2a9d8f,color:#fff
+    style strings fill:#e76f51,color:#fff
+```
+
+*   **The Difference:** V3 and V4 thrust raw bitstreams assuming the recipient inherently grasps the shape (`flatc` guarantees this contract). V5 inextricably packages the **table schema blueprint** alongside the values. It practically bridges an ultra-fast in-memory database engine mirroring .NET DataSets.
+*   **Pros:** Radically dynamic structures. Exceptional interoperability leveraging VBScript, Python, and VBA environments. Graceful backward compatible schema evolutions traversing live systems.
+*   **Cons:** Executing index lookup sequences evaluating columns slightly increases processing burdens versus rigid V4 static arrays.
 *   **Deep Dive:** [SharedValueV5 Architecture](SharedValueV5/ARCHITECTURE.md)
 
 ## Common Architectural Principles Across V3-V5
