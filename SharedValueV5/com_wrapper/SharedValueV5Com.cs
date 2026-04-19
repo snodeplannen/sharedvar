@@ -31,9 +31,9 @@ namespace SharedValueV5.Com
         private SharedDataSet? _lastReceivedData;
         private SharedDataSet? _lastReceivedReverseData;
         private bool _hasNewData;
-        private bool _hasNewReverseData;
         private string? _lastError;
 
+        /// <summary>Constructs the COM Wrapper with a default DataSet.</summary>
         public SharedValueV5Com()
         {
             _dataSet = new SharedDataSet("ComDataSet");
@@ -124,7 +124,6 @@ namespace SharedValueV5.Com
                 _engine.OnReverseDataReady += (ds) =>
                 {
                     _lastReceivedReverseData = ds;
-                    _hasNewReverseData = true;
                 };
 
                 return true;
@@ -369,6 +368,7 @@ namespace SharedValueV5.Com
             return val;
         }
 
+        /// <summary>Clean up engine resources safely.</summary>
         public void Dispose()
         {
             Disconnect();

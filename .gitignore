@@ -137,3 +137,6 @@ pip-log.txt
 build/
 *.pyd
 __pycache__/
+
+.clangd
+compile_commands.json

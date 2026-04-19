@@ -8,6 +8,7 @@ namespace SharedValueV5
     /// Low-level IPC transport engine using Memory-Mapped Files, Named Mutex, and Named Events.
     /// This is the V4 engine adapted for V5: it operates on raw byte[] instead of FlatBuffers.
     /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public class SharedValueEngine : IDisposable
     {
         private readonly MemoryMappedFile _mmf;
