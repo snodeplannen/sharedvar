@@ -1,6 +1,6 @@
 # ATL COM Server & SharedValue — Monorepo
 
-**Versie:** 0.3.0
+**Versie:** 0.4.0
 
 Een Windows C++ project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen tussen onafhankelijke processen. Het project biedt vier generaties:
 
@@ -56,6 +56,7 @@ cursor_com_test/
 │   └── build_schema.ps1             #   Automatische flatc download & codegen
 ├── SharedValueV4/                   # SharedValue Bidirectionele FlatBuffers engine (V4)
 ├── SharedValueV5/                   # SharedValue Dynamic Schema IPC Engine (V5)
+├── SharedValueV5Installer/          # WiX v4 MSI Installer voor de V5 SDK
 ├── scripts/                         # PowerShell diagnostische tools
 ├── docs/                            # Ontwerp- en architectuurdocumentatie
 ├── tests/                           # Cross-language integratietests
