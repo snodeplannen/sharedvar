@@ -135,8 +135,12 @@ pip-log.txt
 # Python
 .venv/
 build/
+dist/
+*.egg-info/
+*.egg
 *.pyd
 __pycache__/
+
 
 .clangd
 compile_commands.json
