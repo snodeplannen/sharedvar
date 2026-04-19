@@ -1,0 +1,22 @@
+[Consumer] Starting SharedValueV5 Consumer...
+[Consumer] Channel: V5Cross, MaxEvents: 3
+[Consumer] Waiting for producer...
+[Engine] Waiting for primary host Ready Event: Global\V5Cross_P2C_Ready
+
+--- Event #1 ---
+  Table: Sensoren (v5, locked)
+    SensorId(String)	Temperature(Double)	Humidity(Double)	IsActive(Bool)	StatusCode(Int32)	
+    Sensor_01	19,465081754196316	67,36932116775674	True	200	
+    Sensor_02	25,427653658471524	41,37554093108694	True	200	
+    Sensor_03	27,937834205975182	52,46844293321819	True	200	
+  Table: Alarmen (v3, locked)
+    AlarmId(Int32)	Bericht(String)	Severity(Int32)	
+
+--- Event #2 ---
+  Table: Sensoren (v5, locked)
+    SensorId(String)	Temperature(Double)	Humidity(Double)	IsActive(Bool)	StatusCode(Int32)	
+    Sensor_01	20,772816904707696	78,78338513925031	True	503	
+    Sensor_02	31,42241025551391	63,91599906540158	True	200	
+    Sensor_03	20,93974295690578	41,809091498338006	True	200	
+  Table: Alarmen (v3, locked)
+    AlarmId(Int32)	Bericht(String)	Severity(Int32)	

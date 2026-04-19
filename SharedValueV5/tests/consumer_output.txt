@@ -1,0 +1,35 @@
+[Consumer] Starting SharedValueV5 Consumer...
+[Consumer] Channel: V5Test, MaxEvents: 3
+[Consumer] Waiting for producer...
+[Engine] Waiting for primary host Ready Event: Global\V5Test_P2C_Ready
+
+--- Event #1 ---
+  Table: Sensoren (v5, locked)
+    SensorId(String)	Temperature(Double)	Humidity(Double)	IsActive(Bool)	StatusCode(Int32)	
+    Sensor_01	29,94814476431769	47,33739151573474	True	200	
+    Sensor_02	24,6874913632265	43,99899682175363	True	200	
+    Sensor_03	20,143002216242422	66,03553893704034	False	200	
+  Table: Alarmen (v3, locked)
+    AlarmId(Int32)	Bericht(String)	Severity(Int32)	
+
+--- Event #2 ---
+  Table: Sensoren (v5, locked)
+    SensorId(String)	Temperature(Double)	Humidity(Double)	IsActive(Bool)	StatusCode(Int32)	
+    Sensor_01	32,07829071569411	40,0311505907433	True	200	
+    Sensor_02	27,174797437052156	40,28265234571655	False	200	
+    Sensor_03	23,99791466704984	41,86662673148786	True	200	
+  Table: Alarmen (v3, locked)
+    AlarmId(Int32)	Bericht(String)	Severity(Int32)	
+
+--- Event #3 ---
+  Table: Sensoren (v5, locked)
+    SensorId(String)	Temperature(Double)	Humidity(Double)	IsActive(Bool)	StatusCode(Int32)	
+    Sensor_01	19,359096533116197	64,73544059121214	True	503	
+    Sensor_02	25,001443479416476	74,39761612607586	True	200	
+    Sensor_03	18,19897437095078	77,68807017196795	True	200	
+  Table: Alarmen (v3, locked)
+    AlarmId(Int32)	Bericht(String)	Severity(Int32)	
+    1003	Auto alarm #3	1	
+
+[Consumer] Received 3/3 events. Exiting.
+[Consumer] Total events: 3

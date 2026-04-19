@@ -1,0 +1,9 @@
+[C++ Producer] Starting SharedValueV5 Producer...
+[C++ Producer] Channel: V5Solo
+[C++ Producer] Schema:
+  Sensoren: 5 columns (locked)
+  Alarmen:  3 columns (locked)
+[C++ Producer] Publishing data. Press Ctrl+C to stop.
+
+[C++ Producer] Published #1 (3 sensors, 0 alarms)   [Engine] Waiting for primary host Ready Event: Global\V5Solo_C2P_Ready
+[C++ Producer] Published #2 (3 sensors, 0 alarms)   

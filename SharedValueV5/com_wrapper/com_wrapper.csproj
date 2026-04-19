@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>SharedValueV5.Com</RootNamespace>
+    <AssemblyName>SharedValueV5.Com</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- COM Interop -->
+    <EnableComHosting>true</EnableComHosting>
+    <GenerateComInteropAssembly>false</GenerateComInteropAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\csharp_core\csharp_core.csproj" />
+  </ItemGroup>
+
+</Project>
