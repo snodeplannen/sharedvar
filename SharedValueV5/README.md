@@ -1,41 +1,41 @@
 # SharedValueV5 — Dynamic Schema IPC Engine
 
-**SharedValueV5** is de volgende generatie van de SharedValue inter-process communicatie engine. Waar V4 leunt op compile-time FlatBuffers schema's, biedt V5 **dynamische, programmatische schema-definitie at runtime** — net als `System.Data.DataSet`.
+**SharedValueV5** is the next generation of the SharedValue inter-process communication engine. While V4 relies on compile-time FlatBuffers schemas, V5 offers **dynamic, programmatic schema definition at runtime** — much like `System.Data.DataSet`.
 
-## Wat is nieuw in V5?
+## What's new in V5?
 
 | Feature | V4 | V5 |
 |:---|:---|:---|
-| Schema definitie | `.fbs` + `flatc` codegen | Method calls at runtime |
-| Schema wijziging | Hercompilatie vereist | Live, zonder herstart |
-| VBS/VBA toegang | Vaste COM wrapper | Volledige dynamische controle |
+| Schema definition | `.fbs` + `flatc` codegen | Method calls at runtime |
+| Schema modification | Recompilation required | Live, without restart |
+| VBS/VBA access | Fixed COM wrapper | Full dynamic control |
 | Multi-table | ❌ | ✅ (DataSet model) |
-| Schema lock-out | N.v.t. | ✅ `LockSchema()` |
-| Serialisatie | FlatBuffers (zero-copy) | Eigen binair formaat (self-describing) |
+| Schema lock-out | N/A | ✅ `LockSchema()` |
+| Serialization | FlatBuffers (zero-copy) | Custom binary format (self-describing) |
 
-> **V5 vervangt V4 niet.** V4 blijft bestaan voor ultra-HFT scenario's (>100K updates/sec).
+> **V5 does not replace V4.** V4 remains available for ultra-HFT scenarios (>100K updates/sec).
 
-## Architectuur
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Laag 3: Taal-Wrappers                         │
+│  Layer 3: Language Wrappers                     │
 │   C++ Native │ C# (.NET) │ Python │ VBS (COM)  │
 ├─────────────────────────────────────────────────┤
-│  Laag 2: SharedDataSet & SharedTable (NIEUW)    │
+│  Layer 2: SharedDataSet & SharedTable (NEW)     │
 │   Multi-table │ Dynamic Schema │ BinarySerializer│
 ├─────────────────────────────────────────────────┤
-│  Laag 1: SharedValueEngine (hergebruik V4)      │
+│  Layer 1: SharedValueEngine (V4 reuse)          │
 │   MMF │ Named Mutex │ Named Events │ Ready Event│
 └─────────────────────────────────────────────────┘
 ```
 
-## Snel Starten
+## Quick Start
 
 ### C# Producer
 ```csharp
 var ds = new SharedDataSet("Demo");
-var table = ds.Tables.Add("Sensoren");
+var table = ds.Tables.Add("Sensors");
 table.AddColumn("SensorId", ColumnType.String);
 table.AddColumn("Temperature", ColumnType.Double);
 table.LockSchema();
@@ -52,8 +52,8 @@ engine.Publish(ds);
 ### VBScript Producer (Cursor Model)
 ```vbscript
 Set engine = CreateObject("SharedValueV5.Engine")
-engine.CreateTable "Sensoren"
-engine.SelectTable "Sensoren"
+engine.CreateTable "Sensors"
+engine.SelectTable "Sensors"
 engine.DefineColumn "SensorId", "String"
 engine.DefineColumn "Temperature", "Double"
 engine.Connect "Demo", True
@@ -64,7 +64,7 @@ engine.SetValue "Temperature", 22.5
 engine.Publish
 ```
 
-## Bouwen
+## Building
 
 ### C# Core + COM wrapper
 ```powershell
@@ -78,24 +78,24 @@ cmake -B SharedValueV5\cpp_core\build -S SharedValueV5\cpp_core
 cmake --build SharedValueV5\cpp_core\build --config Release
 ```
 
-### Testen (C++ → C#)
+### Testing (C++ → C#)
 ```powershell
 powershell -File SharedValueV5\tests\Run-V5Tests.ps1
 ```
 
-## Projectstructuur
+## Project Structure
 
 ```
 SharedValueV5/
 ├── cpp_core/                 # C++ producer + headers
-│   ├── ColumnDefinition.hpp  # ColumnType enum + definities  
-│   ├── SharedRow.hpp         # Rij met typed getters/setters
-│   ├── SharedTable.hpp       # Tabel + schema + locking
+│   ├── ColumnDefinition.hpp  # ColumnType enum + definitions  
+│   ├── SharedRow.hpp         # Row with typed getters/setters
+│   ├── SharedTable.hpp       # Table + schema + locking
 │   ├── SharedDataSet.hpp     # Multi-table container
 │   ├── BinarySerializer.hpp  # Self-describing serializer
 │   ├── SharedValueV5Engine.hpp # High-level Publish/Listen API
-│   ├── SharedValueEngine.hpp # IPC transport (hergebruik V4)
-│   ├── main.cpp              # Producer voorbeeld
+│   ├── SharedValueEngine.hpp # IPC transport (V4 reuse)
+│   ├── main.cpp              # Producer example
 │   └── CMakeLists.txt
 ├── csharp_core/              # C# consumer + core library
 │   ├── ColumnDefinition.cs
@@ -105,22 +105,22 @@ SharedValueV5/
 │   ├── BinarySerializer.cs
 │   ├── SharedValueV5Engine.cs
 │   ├── SharedValueEngine.cs
-│   ├── Program.cs            # Consumer voorbeeld
+│   ├── Program.cs            # Consumer example
 │   └── csharp_core.csproj
-├── com_wrapper/              # COM-visible wrapper voor VBS/VBA
+├── com_wrapper/              # COM-visible wrapper for VBS/VBA
 │   ├── SharedValueV5Com.cs
 │   └── com_wrapper.csproj
-├── examples/                 # VBScript voorbeelden
+├── examples/                 # VBScript examples
 │   ├── vbs_producer_cursor.vbs
 │   ├── vbs_producer_array.vbs
 │   └── vbs_consumer.vbs
 ├── tests/
 │   └── Run-V5Tests.ps1       # End-to-end cross-language test
-├── ARCHITECTURE_NL.md        # Volledig architectuurdocument
-└── README.md                 # Dit bestand
+├── ARCHITECTURE.md           # Complete architecture document
+└── README.md                 # This file
 ```
 
-## Documentatie
+## Documentation
 
-- [ARCHITECTURE_NL.md](ARCHITECTURE_NL.md) — Volledig architectuur & ontwerpdocument
-- [SharedValueV4/ARCHITECTURE_NL.md](../SharedValueV4/ARCHITECTURE_NL.md) — V4 architectuur
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Complete architecture & design document
+- [SharedValueV4/ARCHITECTURE.md](../SharedValueV4/ARCHITECTURE.md) — V4 architecture
