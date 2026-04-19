@@ -61,6 +61,10 @@ Eén engine beheert meerdere `SharedTable`-instanties tegelijk — net als een `
 
 Het schema van een tabel kan worden "bevroren" met `LockSchema()`. Na bevriezing kunnen er geen kolommen meer worden toegevoegd of verwijderd. Dit voorkomt dat consumers per ongeluk de structuur wijzigen.
 
+### Domeinvoorbeeld: Industrieel Sensornetwerk
+Doorheen dit architectuurdocument—en in de onderliggende sequence- en API-voorbeeld diagrammen—hanteren we een consistent domeinvoorbeeld om de functionaliteit van V5 te illustreren: een **Industrieel Sensornetwerk**.
+In dit scenario sluist een reeks hardware-sensoren zijn status door naar het gedeelde geheugen. We slaan data op zoals de `SensorId` (String), `Temperature` (Double) en `Humidity` (Double). Dankzij V5 kunnen we at-runtime een nieuwe generatie sensoren uitrollen die ook een `BatteryLevel` (Double) introduceert. Het dynamische schema wordt automatisch live bijgewerkt in de backend, waardoor applicatie-consumenten direct de extra datakolommen ontdekken, zonder compilatiewerk of herstarts.
+
 ---
 
 ## 3. Systeemoverzicht

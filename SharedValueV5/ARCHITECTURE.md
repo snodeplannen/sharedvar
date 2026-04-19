@@ -11,6 +11,10 @@ SharedValueV5 introduces a dynamic schema IPC engine designed to overcome the li
 3. **Data Serialization:** Achieved through a specialized internal BinarySerializer that segregates fixed-size variables and a dynamic string/blob pool to prevent memory fragmentation.
 4. **Transport:** Relies on the same battle-tested `SharedValueEngine` from V4, utilizing unmanaged Windows Memory-Mapped Files, Named Mutexes, and Named Events.
 
+### Domain Example: Industrial Sensor Network
+Throughout this architecture document—and in the underlying sequence and memory layout diagrams—we use a consistent domain example to illustrate V5's capabilities: an **Industrial Sensor Network**.
+Imagine a centralized monitoring system where various hardware sensors pipe state data into the shared memory. We track entities like `SensorId` (String), `Temperature` (Double), and `Humidity` (Double). With V5, if a new generation of sensors introduces a `BatteryLevel` metric while the system is running, the schema dynamically evolves, and consumers automatically discover and process the new `BatteryLevel` column without breaking or restarting.
+
 ---
 
 ## 1. System Overview
