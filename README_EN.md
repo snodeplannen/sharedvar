@@ -1,11 +1,13 @@
 # ATL COM Server & SharedValue — Monorepo
 
-**Version:** 0.2.0
+**Version:** 0.3.0
 
-A Windows C++ project for securely exchanging and persistently maintaining shared variables between independent processes. The project provides two generations:
+A Windows C++ project for securely exchanging and persistently maintaining shared variables between independent processes. The project provides four generations:
 
 - **SharedValueV2** — COM/RPC-based engine with an ATL Out-of-Process EXE Server.
 - **SharedValueV3 (MemMap)** — Ultra-fast Memory-Mapped Files engine with FlatBuffers, devoid of any COM dependencies.
+- **SharedValueV4** — Dual-Channel (bidirectional) Memory-Mapped Engine with compile-time schemas.
+- **SharedValueV5** — Dynamic Schema IPC Engine with multi-table support, runtime schema locks, and COM interoperability.
 
 ## Project Overview
 
@@ -20,7 +22,7 @@ This project provides **two variants** of the same COM Server:
 
 The EXE variant is the **primary production model**: it runs as an independent Windows process with which multiple independent clients (C#, VBScript, Python) can simultaneously share data via COM/RPC marshaling.
 
-### Memory-Mapped Engine (V3)
+### Memory-Mapped IPC Engines (V3, V4, V5)
 
 | Component | Language | Purpose | Location |
 |---|---|---|---|
@@ -52,6 +54,8 @@ cursor_com_test/
 │   ├── csharp_core/                 #   C# managed consumer
 │   ├── ARCHITECTURE_EN.md           #   Extensive architecture with Mermaid diagrams
 │   └── build_schema.ps1             #   Automated flatc download & codegen
+├── SharedValueV4/                   # SharedValue Bidirectional FlatBuffers engine (V4)
+├── SharedValueV5/                   # SharedValue Dynamic Schema IPC Engine (V5)
 ├── scripts/                         # PowerShell diagnostic tools
 ├── docs/                            # Design and architecture documentation
 ├── tests/                           # Cross-language integration tests
@@ -60,28 +64,24 @@ cursor_com_test/
 └── INSTALL_EN.md                    # Compilation and installation instructions
 ```
 
-## Comparison of the Three Variants
+## Comparison of the Variants
 
-This project encompasses three architecturally distinct approaches for cross-process data sharing. Each has its own strengths, limitations, and ideal application domains.
+This project encompasses multiple architecturally distinct approaches for cross-process data sharing. Each has its own strengths, limitations, and ideal application domains.
 
 ### Overview Table
 
-| Feature | Legacy DLL (InprocServer32) | EXE Server + SharedValueV2 | SharedValueV3 MemMap |
-|---|---|---|---|
-| **Process model** | In-process (loaded in client) | Out-of-process (standalone EXE) | No server required |
-| **Transport** | Direct function call | RPC over Named Pipes | Direct shared memory |
-| **Serialization** | None (same address space) | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) |
-| **Latency per call** | ~1 ns (in-proc) | ~1-10 μs (RPC marshaling) | ~10-100 ns (pointer read) |
-| **Cross-process** | ❌ No | ✅ Yes | ✅ Yes |
-| **Multi-client** | ❌ No (per-process instance) | ✅ Yes (singleton server) | ✅ Yes (kernel object sharing) |
-| **Callbacks/Events** | COM Connection Points | COM IEventCallback (RPC) | Named Events (0% CPU) |
-| **Dynamic data** | `std::vector`, `BSTR` | `VARIANT`, `SAFEARRAY` | FlatBuffer tables (infinitely nested) |
-| **Schema evolution** | Manual (C++ headers) | COM IDL / TypeLib | FlatBuffers `.fbs` (forward/backward) |
-| **Requires registration** | Yes (`regsvr32`) | Yes (`/RegServer`) | ❌ No |
-| **Needs Admin rights** | Yes (registration) | Yes (registration) | No (or `Global\` namespace*) |
-| **Language support** | Any COM-compatible language | Any COM-compatible language | Any language with FlatBuffers + OS API |
-| **Thread safety** | `std::mutex` (in-process) | `std::mutex` (in-process) | Named Mutex (cross-process) |
-| **COM dependency** | Full | Full | ❌ None |
+| Feature | EXE Server + SharedValueV2 | SharedValueV3 (MemMap) | SharedValueV4 (Bidirectional) | SharedValueV5 (Dynamic Schema) |
+|---|---|---|---|---|
+| **Process model** | Out-of-process (standalone EXE) | No server required | No server required | No server required |
+| **Transport** | RPC over Named Pipes | Direct shared memory | Direct shared memory | Direct shared memory |
+| **Serialization** | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) | FlatBuffers (zero-copy) | Custom cross-language binary format |
+| **Latency per call**| ~1-10 μs (RPC marshaling) | ~10-100 ns (pointer read) | ~10-100 ns | ~10-100 ns |
+| **Traffic direction**| Bidirectional | Unidirectional (P2C) | Bidirectional (Dual-Channel) | Bidirectional (Dual-Channel) |
+| **Multi-client** | ✅ Yes (singleton server) | ✅ Yes (kernel object sharing) | ✅ Yes | ✅ Yes |
+| **Callbacks/Events**| COM IEventCallback (RPC) | Named Events (0% CPU) | Named Events (0% CPU) | Named Events (0% CPU) |
+| **Schema evolution**| COM IDL / TypeLib | FlatBuffers `.fbs` (compile) | FlatBuffers `.fbs` (compile) | Runtime (programmatic, `DataSet`) |
+| **Requires reg.** | Yes (`/RegServer`) | ❌ No | ❌ No | ❌ No (except COM wrapper for VBS) |
+| **COM dependency** | Full | ❌ None | ❌ None | ❌ None (optional COM wrapper provided) |
 
 > \* The `Global\` namespace for Named Kernel Objects requires `SeCreateGlobalPrivilege` by default, which is available to Administrators and services.
 
@@ -158,20 +158,30 @@ Direct memory exchange via the Windows kernel, without COM or RPC intervention.
 - When a C++ backend continuously produces data which a C# frontend (or multiple consumers) must display.
 - When you **do not wish** or cannot carry out **COM registration** (e.g., in portable or containerized deployments).
 
+### 4. SharedValueV4 & V5 — The Modern Generations
+
+V4 and V5 build upon the ultra-fast foundations of V3, whilst resolving specific limitations:
+
+- **V4 (Bidirectional)**: Introduces a C2P (Consumer-to-Producer) return channel via memory-mapped files. Superbly suited for closed ecosystems harboring HFT (High Frequency Trading) latency requirements (>100,000 updates per second), where the schema is determined at compile-time (`flatc`).
+- **V5 (Dynamic Schema)**: Implements an ADO.NET-esque `DataSet` + `DataTable` model *within* the shared memory. C# and VBScript clients can programmatically generate and read dynamic columns at runtime. This schema is "self-describing" and iterative, buttressed by multi-language serialization and COM integration.
+
 ---
 
 ### Decision Tree
 
-```
 Do you need cross-process data sharing?
 ├── No → Legacy DLL (fastest, simplest)
 └── Yes
-    ├── Do you need method calls / RPC from the client?
+    ├── Do you need complex RPC in many languages with legacy Office macros?
     │   └── Yes → EXE Server + SharedValueV2
-    ├── Do you have multi-language clients (VBScript, Python, C#)?
-    │   └── Yes → EXE Server + SharedValueV2
-    └── Do you desire maximum speed, unidirectional data push?
-        └── Yes → SharedValueV3 MemMap
+    └── Do you require zero-overhead shared memory?
+        ├── Is your schema dynamic or runtime-determined?
+        │   └── Yes → SharedValueV5 (Dynamic Schema)
+        └── Are data types and tables determined ahead of time?
+            ├── Do you solely require push-data? (Producer→Consumer)
+            │   └── Yes → SharedValueV3 (MemMap)
+            └── Do you require push & reply traffic? (Bidirectional)
+                └── Yes → SharedValueV4 (Dual-Channel)
 ```
 
 
@@ -223,3 +233,5 @@ Refer to [`tests/README_EN.md`](tests/README_EN.md) for a comprehensive test ove
 - [SharedValueV2/README_EN.md](SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.
 - [SharedValueV3_MemMap/README_EN.md](SharedValueV3_MemMap/README_EN.md) — Quickstart for the ultra-fast Memory-Mapped FlatBuffers engine (V3).
 - [SharedValueV3_MemMap/ARCHITECTURE_EN.md](SharedValueV3_MemMap/ARCHITECTURE_EN.md) — Extensive V3 architecture document featuring Mermaid diagrams.
+- [SharedValueV5/README.md](SharedValueV5/README.md) — Quickstart for the SharedValueV5 Dynamic Schema IPC engine with VBScript / C# / C++ support.
+- [SharedValueV5/ARCHITECTURE_NL.md](SharedValueV5/ARCHITECTURE_NL.md) — Exhaustive design document on the SharedValueV5 DataSets, Lazy Initialization, and Binary Serialization.

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-04-19
+
+### Added
+- **SharedValueV5 Dynamic Schema IPC Engine**: Implemented the fifth generation engine mirroring ADO.NET `DataSet` and `DataTable` functionality within cross-process shared memory.
+- **V5 Binary Serializer**: Created a custom cross-language binary serialization format (`SV5D`) featuring a table directory, type definitions, row block indexing and string pooling.
+- **V5 COM Wrapper**: Added a fully interop-capable COM wrapper supporting both Cursor Models (for iterative loops) and Parameter-Array Models (via `AddRowDirect`) for full VBScript/Python programmatic schema control.
+- **Lazy Channel Initialization**: Developed asynchronous background-thread initialization (`StartListeningReverse`) to solve Primary/Secondary Host deadlocks in bidirectional setups.
+- **Cross-Language V5 E2E Tests**: Implemented `Run-V5Tests.ps1` demonstrating dynamic multi-table schema autodiscovery over named memory-mapped files.
+- **SharedValueV4 Dual-Channel Engine**: Introduced a bidirectional (Producer/Consumer) C2P return channel into the statically-typed FlatBuffers MemMap ecosystem for complex request/reply scenarios.
+
+---
+
 ## [0.2.0] - 2026-04-09
 
 ### Added

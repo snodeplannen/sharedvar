@@ -1,11 +1,13 @@
 # ATL COM Server & SharedValue — Monorepo
 
-**Versie:** 0.2.0
+**Versie:** 0.3.0
 
-Een Windows C++ project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen tussen onafhankelijke processen. Het project biedt twee generaties:
+Een Windows C++ project voor het veilig uitwisselen en persistent bewaren van gedeelde variabelen tussen onafhankelijke processen. Het project biedt vier generaties:
 
 - **SharedValueV2** — COM/RPC-gebaseerde engine met ATL Out-of-Process EXE Server.
 - **SharedValueV3 (MemMap)** — Ultra-fast Memory-Mapped Files engine met FlatBuffers, zonder COM-afhankelijkheid.
+- **SharedValueV4** — Dual-Channel (bidirectionele) Memory-Mapped Engine met compile-time schema's.
+- **SharedValueV5** — Dynamic Schema IPC Engine met multi-table support, runtime schema lock en COM-interoperabiliteit.
 
 ## Projectoverzicht
 
@@ -20,7 +22,7 @@ Dit project levert **twee varianten** van dezelfde COM Server:
 
 De EXE-variant is het **primaire productiemodel**: het draait als een zelfstandig Windows-proces waarmee meerdere onafhankelijke clients (C#, VBScript, Python) tegelijkertijd data delen via COM/RPC marshaling.
 
-### Memory-Mapped Engine (V3)
+### Memory-Mapped IPC Engines (V3, V4, V5)
 
 | Component | Taal | Doel | Locatie |
 |---|---|---|---|
@@ -52,6 +54,8 @@ cursor_com_test/
 │   ├── csharp_core/                 #   C# managed consumer
 │   ├── ARCHITECTURE.md              #   Uitgebreide architectuur met Mermaid diagrammen
 │   └── build_schema.ps1             #   Automatische flatc download & codegen
+├── SharedValueV4/                   # SharedValue Bidirectionele FlatBuffers engine (V4)
+├── SharedValueV5/                   # SharedValue Dynamic Schema IPC Engine (V5)
 ├── scripts/                         # PowerShell diagnostische tools
 ├── docs/                            # Ontwerp- en architectuurdocumentatie
 ├── tests/                           # Cross-language integratietests
@@ -60,28 +64,24 @@ cursor_com_test/
 └── INSTALL.md                       # Compilatie- en installatie-instructies
 ```
 
-## Vergelijking van de Drie Varianten
+## Vergelijking van de Varianten
 
-Dit project bevat drie architectureel verschillende benaderingen voor cross-process data sharing. Elk heeft zijn eigen sterktes, beperkingen en ideale toepassingsgebieden.
+Dit project bevat meerdere architectureel verschillende benaderingen voor cross-process data sharing. Elk heeft zijn eigen sterktes, beperkingen en ideale toepassingsgebieden.
 
 ### Overzichtstabel
 
-| Eigenschap | Legacy DLL (InprocServer32) | EXE Server + SharedValueV2 | SharedValueV3 MemMap |
-|---|---|---|---|
-| **Procesmodel** | In-process (geladen in client) | Out-of-process (eigen EXE) | Geen server nodig |
-| **Transport** | Direct function call | RPC over Named Pipes | Direct shared memory |
-| **Serialisatie** | Geen (zelfde adresruimte) | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) |
-| **Latency per call** | ~1 ns (in-proc) | ~1-10 μs (RPC marshaling) | ~10-100 ns (pointer read) |
-| **Cross-process** | ❌ Nee | ✅ Ja | ✅ Ja |
-| **Multi-client** | ❌ Nee (per-process instantie) | ✅ Ja (singleton server) | ✅ Ja (kernel object sharing) |
-| **Callbacks/Events** | COM Connection Points | COM IEventCallback (RPC) | Named Events (0% CPU) |
-| **Dynamische data** | `std::vector`, `BSTR` | `VARIANT`, `SAFEARRAY` | FlatBuffer tables (onbeperkt genest) |
-| **Schema evolutie** | Handmatig (C++ headers) | COM IDL / TypeLib | FlatBuffers `.fbs` (forward/backward) |
-| **Registratie vereist** | Ja (`regsvr32`) | Ja (`/RegServer`) | ❌ Nee |
-| **Admin-rechten nodig** | Ja (registratie) | Ja (registratie) | Nee (of `Global\` namespace*) |
-| **Taalondersteuning** | Elke COM-compatibele taal | Elke COM-compatibele taal | Elke taal met FlatBuffers + OS API |
-| **Thread safety** | `std::mutex` (in-process) | `std::mutex` (in-process) | Named Mutex (cross-process) |
-| **COM-afhankelijkheid** | Volledig | Volledig | ❌ Geen |
+| Eigenschap | EXE Server + SharedValueV2 | SharedValueV3 (MemMap) | SharedValueV4 (Bidirectioneel) | SharedValueV5 (Dynamic Schema) |
+|---|---|---|---|---|
+| **Procesmodel** | Out-of-process (eigen EXE) | Geen server nodig | Geen server nodig | Geen server nodig |
+| **Transport** | RPC over Named Pipes | Direct shared memory | Direct shared memory | Direct shared memory |
+| **Serialisatie** | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) | FlatBuffers (zero-copy) | Eigen cross-language binair formaat |
+| **Latency per call**| ~1-10 μs (RPC marshaling) | ~10-100 ns (pointer read) | ~10-100 ns | ~10-100 ns |
+| **Richtingsverkeer**| Bidirectioneel | Unidirectioneel (P2C) | Bidirectioneel (Dual-Channel) | Bidirectioneel (Dual-Channel) |
+| **Multi-client** | ✅ Ja (singleton server) | ✅ Ja (kernel object sharing) | ✅ Ja | ✅ Ja |
+| **Callbacks/Events**| COM IEventCallback (RPC) | Named Events (0% CPU) | Named Events (0% CPU) | Named Events (0% CPU) |
+| **Schema evolutie** | COM IDL / TypeLib | FlatBuffers `.fbs` (compile) | FlatBuffers `.fbs` (compile) | Runtime (programmatisch, `DataSet`) |
+| **Registratie vereist**| Ja (`/RegServer`) | ❌ Nee | ❌ Nee | ❌ Nee (behalve de COM-wrapper voor VBS) |
+| **COM-afh.** | Volledig | ❌ Geen | ❌ Geen | ❌ Geen (optionele COM wrapper meegeleverd) |
 
 > \* De `Global\` namespace voor Named Kernel Objects vereist standaard `SeCreateGlobalPrivilege`, wat beschikbaar is voor Administrators en services.
 
@@ -158,20 +158,30 @@ Directe geheugenuitwisseling via de Windows kernel, zonder tussenkomst van COM o
 - Wanneer een C++ backend continu data produceert die een C# frontend (of meerdere consumers) moet tonen.
 - Wanneer je **geen COM-registratie** wilt of kunt uitvoeren (bijv. in portable of containerized deployments).
 
+### 4. SharedValueV4 & V5 — De Moderne Generaties
+
+V4 en V5 bouwen voort op de ultra-snelle fundamenten van V3, maar lossen specifieke beperkingen op:
+
+- **V4 (Bidirectioneel)**: Voegt een C2P (Consumer-to-Producer) return channel toe over memory-mapped files. Uitermate geschikt voor gesloten ecosystemen met HFT (High Frequency Trading) latency eisen (>100.000 updates per seconde) waarbij het schema bij compile-time (`flatc`) vastligt.
+- **V5 (Dynamic Schema)**: Implementeert een ADO.NET-achtig `DataSet` + `DataTable` model *binnen* het gedeelde geheugen. C# en VBScript clients kunnen at runtime dynamische kolommen aanmaken en uitlezen. Het schema is "self-describing" en iteratief, ondersteund door multi-taal serializers en COM-integratie.
+
 ---
 
 ### Beslisboom
 
-```
 Heb je cross-process data sharing nodig?
 ├── Nee → Legacy DLL (snelst, simpelst)
 └── Ja
-    ├── Heb je method calls / RPC nodig vanuit de client?
+    ├── Heb je complexe RPC in veel talen nodig met legacy Office macro's?
     │   └── Ja → EXE Server + SharedValueV2
-    ├── Heb je multi-language clients (VBScript, Python, C#)?
-    │   └── Ja → EXE Server + SharedValueV2
-    └── Wil je maximale snelheid, unidirectionele data push?
-        └── Ja → SharedValueV3 MemMap
+    └── Heb je zero-overhead gedeeld geheugen nodig?
+        ├── Is je schema dynamisch of runtime-bepaald?
+        │   └── Ja → SharedValueV5 (Dynamic Schema)
+        └── Liggen datatypes en tabellen vooraf vast?
+            ├── Heb je uitsluitend push-data nodig? (Producer→Consumer)
+            │   └── Ja → SharedValueV3 (MemMap)
+            └── Heb je push & antwoord-verkeer nodig? (Bidirectioneel)
+                └── Ja → SharedValueV4 (Dual-Channel)
 ```
 
 
@@ -223,3 +233,5 @@ Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht, of dr
 - [SharedValueV2/README.md](SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
 - [SharedValueV3_MemMap/README.md](SharedValueV3_MemMap/README.md) — Quickstart voor de ultra-fast Memory-Mapped FlatBuffers engine (V3).
 - [SharedValueV3_MemMap/ARCHITECTURE.md](SharedValueV3_MemMap/ARCHITECTURE.md) — Uitgebreid V3-architectuurdocument met Mermaid-diagrammen.
+- [SharedValueV5/README.md](SharedValueV5/README.md) — Snelstart voor de SharedValueV5 Dynamic Schema IPC engine met VBScript / C# / C++ support.
+- [SharedValueV5/ARCHITECTURE_NL.md](SharedValueV5/ARCHITECTURE_NL.md) — Uitgebreid ontwerpdocument over de SharedValueV5 DataSets, Lazy Initialization en Binaire Serialisatie.

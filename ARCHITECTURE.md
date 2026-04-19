@@ -1,5 +1,10 @@
-# Technische Architectuur: ATLProjectcomserverExe
+# Technische Architectuur: ATLProjectcomserverExe (V2)
 
+> **Documentatie Scope:** Dit document beschrijft specifiek de architectuur van **SharedValueV2**, de COM/RPC-gebaseerde Out-of-Process Server. 
+> Voor de architectuur van de nieuwere Memory-Mapped generaties, zie:
+> - [SharedValueV3 MemMap Architectuur](SharedValueV3_MemMap/ARCHITECTURE.md) (Unidirectioneel FlatBuffers)
+> - [SharedValueV4 Architectuur](SharedValueV4/ARCHITECTURE_NL.md) (Bidirectioneel FlatBuffers)
+> - [SharedValueV5 Architectuur](SharedValueV5/ARCHITECTURE_NL.md) (Dynamic Schema IPC)
 ## Inhoudsopgave
 
 1. [Systeemoverzicht](#1-systeemoverzicht)
