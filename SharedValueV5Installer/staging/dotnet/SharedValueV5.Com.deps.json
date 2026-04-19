@@ -1,0 +1,53 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0/win-x64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {},
+    ".NETCoreApp,Version=v8.0/win-x64": {
+      "SharedValueV5.Com/1.0.0": {
+        "dependencies": {
+          "SharedValueV5": "1.0.0",
+          "SharedValueV5.Reference": "1.0.0.0"
+        },
+        "runtime": {
+          "SharedValueV5.Com.dll": {}
+        }
+      },
+      "SharedValueV5/1.0.0": {
+        "runtime": {
+          "SharedValueV5.dll": {
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "SharedValueV5.Reference/1.0.0.0": {
+        "runtime": {
+          "SharedValueV5.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SharedValueV5.Com/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SharedValueV5/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SharedValueV5.Reference/1.0.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

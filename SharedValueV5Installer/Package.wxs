@@ -1,0 +1,27 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <!-- SharedValueV5 SDK MSI Package Definition -->
+  <Package Name="SharedValueV5 SDK" Manufacturer="SharedValue Project" Version="0.4.0.0" UpgradeCode="AA11BB22-CC33-DD44-EE55-FF6677889900">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <!-- Standard UI Sequence for Install Directory -->
+    <ui:WixUI Id="WixUI_InstallDir" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <Feature Id="Main" Title="SharedValueV5 Core SDK" Description="Installs the .NET 8 assemblies, Python Extensions, C++ Headers, and System Registry Hooks." Level="1">
+      <ComponentGroupRef Id="DotNetComponents" />
+      <ComponentGroupRef Id="CppComponents" />
+      <ComponentGroupRef Id="PythonComponents" />
+      <ComponentGroupRef Id="ExampleComponents" />
+    </Feature>
+
+    <!-- Directory Layout -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SharedValueV5 SDK">
+        <Directory Id="DIR_DOTNET" Name="dotnet" />
+        <Directory Id="DIR_CPP" Name="cpp" />
+        <Directory Id="DIR_PYTHON" Name="python" />
+        <Directory Id="DIR_EXAMPLES" Name="examples" />
+      </Directory>
+    </StandardDirectory>
+  </Package>
+</Wix>

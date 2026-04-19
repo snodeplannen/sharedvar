@@ -1,0 +1,75 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <!-- .NET 8 Core & COM Wrapper Assemblies -->
+    <ComponentGroup Id="DotNetComponents" Directory="DIR_DOTNET">
+      <Component Id="cmp_csharp_core" Guid="EDAEFE11-C7D8-444A-B6A8-A299F3EFD04D" Bitness="always64">
+        <File Id="file_csharp_core" Source="staging\dotnet\SharedValueV5.dll" KeyPath="yes" />
+      </Component>
+      
+      <Component Id="cmp_SharedValueV5_Com" Guid="22C81DF9-CC3A-4FFF-A558-A816C045E1FB" Bitness="always64">
+        <File Id="file_SharedValueV5_Com" Source="staging\dotnet\SharedValueV5.Com.dll" KeyPath="yes" />
+        <!-- JSON descriptors required by COMHost -->
+        <File Id="file_deps" Source="staging\dotnet\SharedValueV5.Com.deps.json" />
+        <File Id="file_runtimeconfig" Source="staging\dotnet\SharedValueV5.Com.runtimeconfig.json" />
+      </Component>
+
+      <!-- The COMHost DLL acts as the native entrypoint redirecting to .NET 8 -->
+      <Component Id="cmp_comhost" Guid="F9790AFE-BE39-44FD-A316-92F26183ADEC" Bitness="always64">
+        <File Id="file_comhost_dll" Source="staging\dotnet\SharedValueV5.Com.comhost.dll" KeyPath="yes" />
+        
+        <!-- Registration for ProgId: SharedValueV5.Engine -->
+        <RegistryKey Root="HKCR" Key="SharedValueV5.Engine">
+          <RegistryValue Type="string" Value="SharedValueV5Com Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="SharedValueV5.Engine\CLSID">
+          <RegistryValue Type="string" Value="{B7C3D5E1-4A2F-4B89-9E6D-1F3A5C7D9E0B}" />
+        </RegistryKey>
+
+        <!-- Registration for CLSID -->
+        <RegistryKey Root="HKCR" Key="CLSID\{B7C3D5E1-4A2F-4B89-9E6D-1F3A5C7D9E0B}">
+          <RegistryValue Type="string" Value="SharedValueV5Com Class" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="CLSID\{B7C3D5E1-4A2F-4B89-9E6D-1F3A5C7D9E0B}\ProgId">
+          <RegistryValue Type="string" Value="SharedValueV5.Engine" />
+        </RegistryKey>
+        
+        <!-- InprocServer32 MUST point to the explicitly deployed comhost.dll (not regasm/mscoree) -->
+        <RegistryKey Root="HKCR" Key="CLSID\{B7C3D5E1-4A2F-4B89-9E6D-1F3A5C7D9E0B}\InprocServer32">
+          <RegistryValue Type="string" Value="[#file_comhost_dll]" />
+          <RegistryValue Type="string" Name="ThreadingModel" Value="Both" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <!-- Native C++ Header-only SDK Files -->
+    <ComponentGroup Id="CppComponents" Directory="DIR_CPP">
+      <Component Id="cmp_cpp_headers" Guid="870020AB-D376-466D-B090-DE5EAE494E14">
+        <File Id="file_BinarySerializer_hpp" Source="staging\cpp\BinarySerializer.hpp" KeyPath="yes" />
+        <File Id="file_ColumnDefinition_hpp" Source="staging\cpp\ColumnDefinition.hpp" />
+        <File Id="file_SharedDataSet_hpp" Source="staging\cpp\SharedDataSet.hpp" />
+        <File Id="file_SharedRow_hpp" Source="staging\cpp\SharedRow.hpp" />
+        <File Id="file_SharedTable_hpp" Source="staging\cpp\SharedTable.hpp" />
+        <File Id="file_SharedValueV5Engine_hpp" Source="staging\cpp\SharedValueV5Engine.hpp" />
+        <File Id="file_SharedValueEngine_hpp" Source="staging\cpp\SharedValueEngine.hpp" />
+        <File Id="file_SharedValueException_hpp" Source="staging\cpp\SharedValueException.hpp" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Python Extensions -->
+    <ComponentGroup Id="PythonComponents" Directory="DIR_PYTHON">
+      <Component Id="cmp_python_ext" Guid="CCD7ED02-5353-4315-9FB1-28564F50C1CF" Bitness="always64">
+        <File Id="file_sharedvalue5_pyd" Source="staging\python\sharedvalue5.pyd" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Example Scripts (VBScript / VBA) -->
+    <ComponentGroup Id="ExampleComponents" Directory="DIR_EXAMPLES">
+      <Component Id="cmp_examples" Guid="813C1C70-9EF0-4B14-B97F-C86552B58DF8">
+        <File Id="file_vbs_producer_cursor" Source="staging\examples\vbs_producer_cursor.vbs" KeyPath="yes" />
+        <File Id="file_vbs_producer_array" Source="staging\examples\vbs_producer_array.vbs" />
+        <File Id="file_vbs_consumer" Source="staging\examples\vbs_consumer.vbs" />
+      </Component>
+    </ComponentGroup>
+
+  </Fragment>
+</Wix>
