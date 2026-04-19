@@ -120,6 +120,12 @@ jobs:
           # Copy SharedValueV5 staging SDK artifacts
           xcopy /Y /S SharedValueV5Installer\staging\* developer_bundle\SharedValueV5_SDK\
           
+          # Inject full Source Code & Documentation into the bundle
+          mkdir developer_bundle\SourceCode_And_Docs
+          git archive HEAD -o temp_src.zip
+          Expand-Archive temp_src.zip -DestinationPath developer_bundle\SourceCode_And_Docs
+          Remove-Item temp_src.zip
+          
           # Zip boundaries
           Compress-Archive -Path developer_bundle\* -DestinationPath Developer_Bundle.zip
           
