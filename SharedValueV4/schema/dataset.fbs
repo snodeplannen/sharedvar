@@ -1,0 +1,21 @@
+namespace SharedMemMap;
+
+table NestedDetails {
+  temperature: double;
+  humidity: double;
+  status_code: int;
+}
+
+table DataRow {
+  row_id: string;
+  is_active: bool;
+  details: [NestedDetails];
+}
+
+table SharedDataset {
+  api_version: string;
+  last_updated_utc: string;
+  rows: [DataRow];
+}
+
+root_type SharedDataset;
