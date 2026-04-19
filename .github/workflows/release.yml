@@ -145,7 +145,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Python Wheels (3.10-3.13 Windows)
-        uses: pypa/cibuildwheel@v2
+        uses: pypa/cibuildwheel@v2.22.0
         with:
           package-dir: SharedValueV5/python_ext
         env:
