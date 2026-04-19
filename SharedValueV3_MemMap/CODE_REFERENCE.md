@@ -1,40 +1,40 @@
 # SharedValueV3 MemMap — Code Reference
 
-Dit document biedt een overzicht van de belangrijkste bestanden, componenten en klassen in deze implementatie.
+This document provides an overview of the most important files, components, and classes in this implementation.
 
 ## 1. Schema (`schema.fbs`)
-Centraal in de V3 architectuur staat de **vooraf afgesproken structuur**. In tegenstelling tot V2, waar de structuur dynamisch op runtime werd ontdekt via type-flags, verwacht V3 een strak schema.
+Central to the V3 architecture is the **pre-agreed structure**. Unlike V2, where the structure was discovered dynamically at runtime via type-flags, V3 expects a strict schema.
 
-Belangrijkste tabellen en structen in FlatBuffers:
-- **`NestedDetail`** (Table): Bevat een `id` (int) en een string `description`.
-- **`DataRow`** (Table): Datastructuur per rij met o.a. `id`, `timestamp`, `score`, een boolean `is_active` én een array met `NestedDetail` objecten.
-- **`SharedDataset`** (Table): De root-node die een vector of lijst van `DataRow` objecten omvat.
+Main tables and structs in FlatBuffers:
+- **`NestedDetail`** (Table): Contains an `id` (int) and a string `description`.
+- **`DataRow`** (Table): Data structure per row with properties such as `id`, `timestamp`, `score`, a boolean `is_active` and an array of `NestedDetail` objects.
+- **`SharedDataset`** (Table): The root node containing a vector or list of `DataRow` objects.
 
 ## 2. C++ Core (Producer)
 
-De producer bevindt zich in `cpp_core/`.
+The producer code is located in `cpp_core/`.
 
 ### `SharedValueEngine.hpp`
-De C++ implementatie van de inter-proces transportlaag.
-- **`SharedValueEngine(name, maxSize)`**: Beheert en opent drie kern Windows Kernel Objects gebaseerd op de ingestelde `name` (zoals `Global\MyGlobalDataset_Map`):
-  1. Een **Mutex** ter voorkoming van tear-reads tijdens overdracht.
-  2. Een **Auto-Reset Event** voor asynchrone client wakeups na writes.
-  3. De daadwerkelijke **Memory Mapped File** handle (+ MapViewOfFile) voor het aanroepen van data.
-- **`WriteData(const uint8_t* data, size_t size)`**: Zorgt voor veilige exclusieve toegang dmv een mutex lock (`WaitForSingleObject`), checkt of de data in de mapping past, kopieert éérst een `size_t` metadata veld en daarna direct de raw serialisatie byte buffer heen via een memory-copy, ontgrendelt de mutex en seint naar eventuele consumers via het Event (`SetEvent()`).
+The C++ implementation of the inter-process transport layer.
+- **`SharedValueEngine(name, maxSize)`**: Manages and opens three core Windows Kernel Objects based on the configured `name` (e.g., `Global\MyGlobalDataset_Map`):
+  1. A **Mutex** to prevent torn reads during data transfer.
+  2. An **Auto-Reset Event** for asynchronous client wakeups after writes.
+  3. The actual **Memory Mapped File** handle (+ MapViewOfFile) for placing the binary data.
+- **`WriteData(const uint8_t* data, size_t size)`**: Ensures safe exclusive access using a mutex lock (`WaitForSingleObject`). Checks if the data fits in the mapping, first copies a `size_t` metadata field followed directly by the raw serialized byte buffer via `memcpy`, unlocks the mutex, and signals any consumers via the Event (`SetEvent()`).
 
 ### `main.cpp`
-Toont hoe C++ code dynamisch via de `FlatBufferBuilder` boomstructuren (o.a. sub-vectors met `NestedDetail` en `SharedDataset`) optuigt, finaliseert met `.Finish()`, extraheert in byte blokken en verstuurt met behulp van de engine.
+Demonstrates how C++ code dynamically constructs tree structures using the `FlatBufferBuilder` (e.g., sub-vectors with `NestedDetail` and `SharedDataset`), finalizes with `.Finish()`, extracts the byte blocks, and sends them out using the engine.
 
 ## 3. C# Core (Consumer)
 
-De consumer implementatie bevindt zich in `csharp_core/`.
+The consumer implementation is located in `csharp_core/`.
 
 ### `SharedValueEngine.cs`
-De .NET wrappering via `System.IO.MemoryMappedFiles` en WaitHandles voor IPC overdracht.
-- **OnDataReady Event (`Action<SharedDataset>`)**: Native C# event waaraan clientcode zich kan registreren.
-- **`SharedValueEngine(name, maxSize)`**: Opent de corresponderende Mutex, EventWaitHandle en MemoryMappedFile. Verwacht dat deze reeds door de Producer zijn opgesteld (`OpenExisting` overloads, welke throwen als de producer niet leefbaar is of er onvoldoende rechten zijn voor de prefix).
-- **`StartListening()`**: Gebruikt een low-impact background listner Thread die blockeert met event `.WaitOne()`. Vraagt extreem weinig CPU als er geen writes plaatsvinden.
-- **`ReadCurrentData()`**: Regelt via timeout based `Mutex.WaitOne()` exclusieve toegang en decodeert de 8 bytes headers. Geeft deze bytes in the .NET ByteBuffer mee aan de flatbuffer gegenereerde accessors (`SharedDataset.GetRootAsSharedDataset`). 
+The .NET wrapper using `System.IO.MemoryMappedFiles` and WaitHandles for IPC transfer.
+- **OnDataReady Event (`Action<SharedDataset>`)**: Native C# event to which client code can subscribe.
+- **`SharedValueEngine(name, maxSize)`**: Opens the corresponding Mutex, EventWaitHandle, and MemoryMappedFile. Expects these to be already created by the Producer (`OpenExisting` overloads, which throw if the producer is not alive or if permissions for the `Global\` prefix are insufficient).
+- **`StartListening()`**: Uses a low-impact background listener Thread that blocks using the event's `.WaitOne()`. Consumes virtually 0% CPU if no writes occur.
+- **`ReadCurrentData()`**: Arranges exclusive access via a timeout-based `Mutex.WaitOne()` and decodes the 8-byte headers. Passes the remaining bytes in a .NET ByteBuffer to the FlatBuffers-generated accessors (`SharedDataset.GetRootAsSharedDataset`). 
 
 ### `Program.cs`
-Console startpunt voor C#; hecht een parser event function aan `OnDataReady` en haalt moeiteloos data eruit als ware het standaard C# POCO objecten via zero-copy abstractie van de geneste detail arrays en properties.
+The console entry point for C#; attaches a parse event function to `OnDataReady` and effortlessly extracts data as if they were standard C# POCO objects through the zero-copy abstraction of the nested detail arrays and properties.

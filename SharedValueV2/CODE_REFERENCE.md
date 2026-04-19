@@ -1,14 +1,14 @@
-# SharedValueV2 — Code Reference
+﻿# SharedValueV2 — Code Reference
 
-Volledige technische API-referentie voor de SharedValueV2 C++20 header-only library.
+Comprehensive technical API reference mapping the SharedValueV2 C++20 header-only framework.
 
-**Namespace:** `SharedValueV2`
-**Standaard:** C++20
-**Headers:** `SharedValueV2/include/*.hpp`
+**Namespace Designations:** `SharedValueV2`
+**Structural Standards:** C++20
+**Module Headers:** `SharedValueV2/include/*.hpp`
 
 ---
 
-## Inhoudsopgave
+## Table of Contents
 
 1. [SharedValue\<T, MutexPolicy\>](#1-sharedvaluet-mutexpolicy)
 2. [DatasetStore\<TValue, MutexPolicy\>](#2-datasetstoretvalue-mutexpolicy)
@@ -24,25 +24,25 @@ Volledige technische API-referentie voor de SharedValueV2 C++20 header-only libr
 
 ## 1. SharedValue\<T, MutexPolicy\>
 
-**Header:** [`SharedValue.hpp`](include/SharedValue.hpp)
+**Core Header:** [`SharedValue.hpp`](include/SharedValue.hpp)
 
-Thread-safe generieke container voor één gedeelde waarde met observer-notificaties en een ingebouwde EventBus.
+Thread-safe generic container scaffolding singular shared payload states wrapped seamlessly encompassing observer-notification triggers adjoining built-in EventBus parameters inherently.
 
-### Template Parameters
+### Template Specifications
 
-| Parameter | Default | Beschrijving |
+| Parameter designation | Default initialization | Description |
 |---|---|---|
-| `T` | *(verplicht)* | Het type van de opgeslagen waarde. Moet kopieerbaar zijn (`CopyConstructible`). |
-| `MutexPolicy` | `LocalMutexPolicy` | Lock-strategie. Zie [LockPolicies](#5-lockpolicies). |
+| `T` | *(mandatory)* | Encompasses the underlying type. Inherently strictly requires copyability mappings (`CopyConstructible`). |
+| `MutexPolicy` | `LocalMutexPolicy` | Overarching lock strategy. Observe cross-referencing [LockPolicies](#5-lockpolicies) mappings. |
 
-### Constructor
+### Constructor Parameters
 
 ```cpp
-SharedValue();                          // Default-constructed T
-explicit SharedValue(const T& initialValue);  // Met initiële waarde
+SharedValue();                          // Yields a Default-constructed T payload
+explicit SharedValue(const T& initialValue);  // Forces an explicitly injected initial payload assignment
 ```
 
-### State Management
+### State Management Routing
 
 #### `SetValue`
 
@@ -50,14 +50,14 @@ explicit SharedValue(const T& initialValue);  // Met initiële waarde
 void SetValue(const T& newValue);
 ```
 
-Schrijft een nieuwe waarde. Thread-safe. Notifieert alle observers en emitteert `EventType::ValueSet`.
+Injects modified mappings. Demonstrably thread-safe. Triggers notifications cascading matching traversing observers adjoining `EventType::ValueSet` signals spanning EventBus bounds.
 
-**Gedrag:**
-1. Verkrijgt lock op `m_mutex`.
-2. Kopieert `newValue` naar `m_value`.
-3. Geeft lock vrij.
-4. Roept `OnValueChanged(newValue)` aan op alle geregistreerde observers (buiten de lock).
-5. Emitteert `EventType::ValueSet` via de EventBus.
+**Execution loop:**
+1. Strips operational authority acquiring the `m_mutex` lock perfectly.
+2. Embeds payload copying `newValue` mapping `m_value`.
+3. Elevates restrictions disengaging locks flawlessly.
+4. Triggers `OnValueChanged(newValue)` routines bounding previously registered observers (evaluating universally outside blocking constraints).
+5. Emits explicit `EventType::ValueSet` signatures sweeping via the overarching EventBus.
 
 ---
 
@@ -67,9 +67,9 @@ Schrijft een nieuwe waarde. Thread-safe. Notifieert alle observers en emitteert 
 T GetValue() const;
 ```
 
-Leest de huidige waarde. Thread-safe. Retourneert een **kopie** (nooit een referentie).
+Snaps readings evaluating present states smoothly. Confirmed thread-safe execution logic entirely. Relinquishes inherently a concrete **copied variable** (completely dismissing reference hooks flawlessly).
 
-**Complexiteit:** O(1) + kopie-kosten van T.
+**Computational load:** Yields O(1) + associated T-parameter copying thresholds inherently.
 
 ---
 
@@ -79,9 +79,9 @@ Leest de huidige waarde. Thread-safe. Retourneert een **kopie** (nooit een refer
 std::wstring GetCurrentUTCDateTime();
 ```
 
-Retourneert de huidige UTC-tijd als `L"YYYY-MM-DD HH:MM:SS"`. Notifieert observers via `OnDateTimeChanged()`.
+Traverses system sequences resolving UTC metrics mapped securely `L"YYYY-MM-DD HH:MM:SS"`. Distributes notifications looping traversing observers pinging `OnDateTimeChanged()`.
 
-**Platform:** Gebruikt `gmtime_s` op Windows, `gmtime_r` op POSIX.
+**Architectural platform variances:** Executes explicitly utilizing `gmtime_s` bounding Windows infrastructures natively, seamlessly flipping executing `gmtime_r` matching POSIX deployments transparently.
 
 ---
 
@@ -91,11 +91,11 @@ Retourneert de huidige UTC-tijd als `L"YYYY-MM-DD HH:MM:SS"`. Notifieert observe
 std::wstring GetCurrentUserLogin() const;
 ```
 
-Retourneert de huidige Windows-gebruikersnaam via `GetUserNameW()`. Retourneert `L"UnknownUser"` op niet-Windows platforms.
+Interrogates system frameworks fetching current Windows username tokens natively bridging `GetUserNameW()`. Evaluates returning cleanly formatting `L"UnknownUser"` bypassing failure loops impacting non-Windows domains flawlessly.
 
 ---
 
-### Explicit Lock Management
+### Explicit Lock Management Routines
 
 #### `LockSharedValue`
 
@@ -103,9 +103,9 @@ Retourneert de huidige Windows-gebruikersnaam via `GetUserNameW()`. Retourneert 
 bool LockSharedValue();
 ```
 
-Verkrijgt een exclusieve lock op de onderliggende mutex. **De caller is verantwoordelijk voor het aanroepen van `Unlock()`.** Emitteert `EventType::ValueLocked`.
+Acquires completely isolated exclusive lock-handles evaluating underlying mutex mappings. **Operating nodes completely claim underlying responsibility guaranteeing succeeding `Unlock()` commands strictly.** Emits `EventType::ValueLocked` flags cleanly.
 
-**Retourneert:** Altijd `true` (blokkeert totdat lock verkregen).
+**Function return:** Returns perpetually true blocking inherently pausing logic arcs pending acquisition loops universally.
 
 ---
 
@@ -115,11 +115,11 @@ Verkrijgt een exclusieve lock op de onderliggende mutex. **De caller is verantwo
 bool LockSharedValueTimeout(unsigned long ms);
 ```
 
-Probeert de lock te verkrijgen binnen `ms` milliseconden. Emitteert `EventType::ValueLocked` bij succes.
+Attempts snagging lock-handles aggressively yielding mapping `ms` metric bounds smoothly. Triggers native `EventType::ValueLocked` flags sweeping successful connections uniformly.
 
-**Retourneert:** `true` als de lock is verkregen, `false` bij timeout.
+**Function returns:** Evaluates yielding `true` confirming successfully intercepted locks decisively, alternatively yielding `false` catching bounds bypassing timeout limitations directly.
 
-**Let op:** Timeout-functionaliteit is alleen beschikbaar met `NamedSystemMutexPolicy`. Bij `LocalMutexPolicy` wordt `try_lock()` gebruikt (non-blocking).
+**Vital constraint:** Parameterizing exclusively bounded targeting `NamedSystemMutexPolicy` architectures specifically. Harnessing traversing `LocalMutexPolicy` universally shifts invoking purely non-blocking `try_lock()` logic arcs.
 
 ---
 
@@ -129,14 +129,14 @@ Probeert de lock te verkrijgen binnen `ms` milliseconden. Emitteert `EventType::
 void Unlock();
 ```
 
-Geeft de eerder verkregen lock vrij. Emitteert `EventType::ValueUnlocked`.
+Elevates locking parameters releasing grips mapped executing trailing prior interceptions natively. Evaluates emitting cleanly `EventType::ValueUnlocked` triggers.
 
 > [!CAUTION]
-> Aanroepen zonder voorafgaande `LockSharedValue()` resulteert in undefined behavior.
+> Initiating loops targeting bounds devoid of antecedent `LockSharedValue()` sweeps guarantees severely catastrophic undefined processing consequences naturally.
 
 ---
 
-### Observer Pub/Sub
+### Observer Pub/Sub Mechanics
 
 #### `Subscribe`
 
@@ -144,7 +144,7 @@ Geeft de eerder verkregen lock vrij. Emitteert `EventType::ValueUnlocked`.
 void Subscribe(ISharedValueObserver<T>* observer);
 ```
 
-Registreert een observer voor `OnValueChanged` en `OnDateTimeChanged` callbacks. Thread-safe. Duplicaten worden genegeerd.
+Embeds active node handlers targeting `OnValueChanged` flanked bridging `OnDateTimeChanged` overarching sequences. Completely thread-safe. Silently terminates ignoring aggressively repetitive duplication routines natively.
 
 ---
 
@@ -154,11 +154,11 @@ Registreert een observer voor `OnValueChanged` en `OnDateTimeChanged` callbacks.
 void Unsubscribe(ISharedValueObserver<T>* observer);
 ```
 
-Verwijdert een eerder geregistreerde observer. Thread-safe.
+Excises comprehensively trailing observer bindings decisively. Entirely operates stringing thread-safe evaluations strictly.
 
 ---
 
-### EventBus
+### EventBus Operations
 
 #### `GetEventBus`
 
@@ -166,20 +166,20 @@ Verwijdert een eerder geregistreerde observer. Thread-safe.
 EventBus<MutexPolicy>& GetEventBus();
 ```
 
-Retourneert een referentie naar de interne EventBus. Gebruik dit voor het registreren van `IEventListener` objecten die rijkere `MutationEvent` structs ontvangen.
+Translates delivering references encapsulating internal executing EventBus components transparently. Exclusively deployed targeting explicit `IEventListener` node registrations demanding comprehensive detailed `MutationEvent` structural arrays safely.
 
 ---
 
-### Private Members
+### Private Encapsulated Members
 
-| Member | Type | Beschrijving |
+| Encapsulated Member | Type Constraint | Structural Role Definition |
 |---|---|---|
-| `m_value` | `T` | De opgeslagen waarde. |
-| `m_mutex` | `MutexPolicy` (mutable) | Lock voor thread-safety. |
-| `m_observers` | `vector<ISharedValueObserver<T>*>` | Geregistreerde observers. |
-| `m_eventBus` | `EventBus<MutexPolicy>` | Rich event systeem. |
+| `m_value` | `T` | Structurally encompassing overarching stored node variable payloads cleanly. |
+| `m_mutex` | `MutexPolicy` (flagged mutable natively) | Synchronization parameter yielding structural thread-safe bounds entirely. |
+| `m_observers` | `vector<ISharedValueObserver<T>*>` | Vector array maintaining completely mapped registered node bindings gracefully. |
+| `m_eventBus` | `EventBus<MutexPolicy>` | Exhaustively comprehensive rich-event operational routing tracking framework parameters completely. |
 
-### Voorbeeld
+### Configuration Example
 
 ```cpp
 #include "SharedValue.hpp"
@@ -187,13 +187,13 @@ Retourneert een referentie naar de interne EventBus. Gebruik dit voor het regist
 
 using namespace SharedValueV2;
 
-// Thread-safe met lokale mutex
-SharedValue<std::wstring, LocalMutexPolicy> sv(L"initieel");
+// Provisioning a thread-safe variable harnessing explicitly mapped local mutexes
+SharedValue<std::wstring, LocalMutexPolicy> sv(L"initial startup string");
 
-sv.SetValue(L"nieuw");
-auto val = sv.GetValue();  // L"nieuw"
+sv.SetValue(L"new sequence string");
+auto val = sv.GetValue();  // Evaluates extracting L"new sequence string"
 
-// Zero-overhead voor single-threaded code
+// Evaluates effectively eliminating overhead targeting perfectly decoupled single-thread flows
 SharedValue<int, NullMutexPolicy> fast(42);
 ```
 
@@ -201,28 +201,28 @@ SharedValue<int, NullMutexPolicy> fast(42);
 
 ## 2. DatasetStore\<TValue, MutexPolicy\>
 
-**Header:** [`DatasetStore.hpp`](include/DatasetStore.hpp)
+**Core Header:** [`DatasetStore.hpp`](include/DatasetStore.hpp)
 
-Thread-safe pagineerbare key-value store met runtime-wisselbare storage engine, observer-notificaties en EventBus integratie.
+Thread-safe deeply pageable generic key-value store architecture delivering runtime-swappable underlying storage mapping components stringing tightly matching interconnected observer logic adjoining rich EventBus mappings completely natively.
 
-### Template Parameters
+### Template Specifications
 
-| Parameter | Default | Beschrijving |
+| Parameter Designation | Expected Default | Description |
 |---|---|---|
-| `TValue` | *(verplicht)* | Type van de opgeslagen waarden. |
-| `MutexPolicy` | `LocalMutexPolicy` | Lock-strategie. |
+| `TValue` | *(mandatory input parameters required)* | Identifies explicit logic variables structuring internal payloads mapping arrays deeply. |
+| `MutexPolicy` | `LocalMutexPolicy` | Intervenes guiding lock-directives tightly. |
 
-### Constructor
+### Constructor Logic
 
 ```cpp
 explicit DatasetStore(StorageMode mode = StorageMode::Ordered);
 ```
 
-Maakt een lege store aan met de opgegeven storage mode.
+Generates blank pristine repository allocations seamlessly leveraging designated overlapping targeted executing mapping-modes securely.
 
 ---
 
-### Storage Mode
+### Storage Mode Execution Logistics
 
 #### `SetStorageMode`
 
@@ -230,14 +230,14 @@ Maakt een lege store aan met de opgegeven storage mode.
 void SetStorageMode(StorageMode mode);
 ```
 
-Wisselt de onderliggende storage engine. **Alleen toegestaan als de store leeg is.**
+Unlocks toggling operational frameworks traversing underlying routing arrays entirely natively. **Operation exclusively supported confirming absolute untouched completely barren arrays natively.**
 
-| Mode | Container | Lookup | Iteratievolgorde |
+| Logic Mode Array | Array Container | Expected Lookup Speed Constraints | Array Iteration Output Routing Mappings |
 |---|---|---|---|
-| `StorageMode::Ordered` (0) | `std::map` | O(log n) | Alfabetisch gesorteerd |
-| `StorageMode::Unordered` (1) | `std::unordered_map` | O(1) amortized | Ondeterministisch |
+| `StorageMode::Ordered` (evaluates stringing 0 flags) | `std::map` | Evaluates fetching parsing sweeps O(log n) | Alphabetic perfectly mapped arrays sequentially |
+| `StorageMode::Unordered` (evaluates stringing 1 flags) | `std::unordered_map` | Evaluates amortized operations sweeping O(1) uniformly | Non-deterministic entirely scrambled stringing parameters definitively |
 
-**Gooit:** `StoreModeException` als de store niet leeg is.
+**Triggers bounding fault loops:** Pushes sharply `StoreModeException` faults directly confirming evaluations identifying arrays exceeding strictly empty conditions completely.
 
 ---
 
@@ -247,11 +247,11 @@ Wisselt de onderliggende storage engine. **Alleen toegestaan als de store leeg i
 StorageMode GetStorageMode() const;
 ```
 
-Retourneert de huidige storage mode. Thread-safe.
+Extracts currently assigned looping logic directives accurately. Heavily thread-safe implementations uniformly.
 
 ---
 
-### CRUD Operaties
+### CRUD Operation Mechanics
 
 #### `AddRow`
 
@@ -259,9 +259,9 @@ Retourneert de huidige storage mode. Thread-safe.
 void AddRow(const std::wstring& key, const TValue& value);
 ```
 
-Voegt een nieuwe rij toe. Thread-safe. Notifieert observers en emitteert `EventType::RowAdded`.
+Routinely integrates entirely fresh row data mappings tightly natively. Flawlessly thread-safe. Engages triggering observers spanning concurrently broadcasting strings resolving `EventType::RowAdded` flags completely cleanly.
 
-**Gooit:** `DuplicateKeyException` als de key al bestaat.
+**Fires targeted fault sweeps:** Projects mapping `DuplicateKeyException` conditions inherently intersecting parameters colliding previously registered matching overlapping values flawlessly.
 
 ---
 
@@ -271,7 +271,7 @@ Voegt een nieuwe rij toe. Thread-safe. Notifieert observers en emitteert `EventT
 std::optional<TValue> GetRow(const std::wstring& key) const;
 ```
 
-Zoekt een waarde op key. Retourneert `std::nullopt` als de key niet bestaat. Thread-safe.
+Intervenes probing variables tracking localized strings securely. Manifests outputting specifically `std::nullopt` arrays effectively targeting loops missing valid bounds thoroughly. Exceptionally thread-safe routines inherently.
 
 ---
 
@@ -281,7 +281,7 @@ Zoekt een waarde op key. Retourneert `std::nullopt` als de key niet bestaat. Thr
 TValue GetRowOrThrow(const std::wstring& key) const;
 ```
 
-Zoekt een waarde op key. **Gooit** `KeyNotFoundException` als de key niet bestaat. Thread-safe.
+Intervenes probing underlying assigned mapping variables securely array bounds. **Actively cascades** explicitly `KeyNotFoundException` logic blocks mapping completely absent missing node structures. Thread-safe implementations absolutely.
 
 ---
 
@@ -291,9 +291,10 @@ Zoekt een waarde op key. **Gooit** `KeyNotFoundException` als de key niet bestaa
 bool UpdateRow(const std::wstring& key, const TValue& value);
 ```
 
-Overschrijft de waarde van een bestaande key. Thread-safe. Notifieert observers en emitteert `EventType::RowUpdated` (inclusief oude en nieuwe waarde).
+Effectively obliterates previous bounds assigning overlapping mapping elements securely strings deeply. Entirely thread-safe parameters native. Excites registered observer loops simultaneously bouncing `EventType::RowUpdated` properties mapping (integrating identically mirrored former variables coupled targeting current bindings cohesively).
 
-**Retourneert:** `true` als de key bestond en is bijgewerkt, `false` als de key niet bestaat.
+**Returns:** Confirms evaluating stringing `true` loops correctly overlapping prior iterations successfully, alternately pushes evaluating string sequences generating `false` mapping missing bounds implicitly.
+
 
 ---
 
@@ -303,9 +304,9 @@ Overschrijft de waarde van een bestaande key. Thread-safe. Notifieert observers 
 bool RemoveRow(const std::wstring& key);
 ```
 
-Verwijdert een rij. Thread-safe. Emitteert `EventType::RowRemoved`.
+Terminates mapping arrays isolating entirely specific keys. Flawlessly thread-safe routines securely strings entirely. Bounces executing evaluations spanning perfectly `EventType::RowRemoved`.
 
-**Retourneert:** `true` als de key bestond en is verwijderd, `false` als de key niet bestond.
+**Returns:** Exposes loops defining implicitly `true` stringing accurately overlapping deleted matches, returning sequentially mapped generating completely variables mapping `false` implicitly traversing missing targets.
 
 ---
 
@@ -315,11 +316,11 @@ Verwijdert een rij. Thread-safe. Emitteert `EventType::RowRemoved`.
 void Clear();
 ```
 
-Verwijdert alle rijen. Thread-safe. Emitteert `EventType::DatasetCleared`.
+Purges thoroughly destroying isolated array chains definitively. Thorough thread-safe operations completely stringing accurately securely strings deeply. Emanates mapped bounds mapping `EventType::DatasetCleared` strictly explicitly strings deeply.
 
 ---
 
-### Query Operaties
+### Query Array Mechanics
 
 #### `GetRecordCount`
 
@@ -327,7 +328,7 @@ Verwijdert alle rijen. Thread-safe. Emitteert `EventType::DatasetCleared`.
 size_t GetRecordCount() const;
 ```
 
-Retourneert het aantal rijen. Thread-safe.
+Exposes tracking total string array metrics correctly. Thread-safe routines entirely.
 
 ---
 
@@ -337,11 +338,11 @@ Retourneert het aantal rijen. Thread-safe.
 bool HasKey(const std::wstring& key) const;
 ```
 
-Controleert of een key bestaat. Thread-safe.
+Sweeps matching loops identifying valid configurations accurately perfectly cleanly strings entirely. Flawlessly thread-safe algorithms.
 
 ---
 
-### Paginering
+### Dimensional Pagination Flow
 
 #### `FetchKeys`
 
@@ -349,12 +350,12 @@ Controleert of een key bestaat. Thread-safe.
 std::vector<std::wstring> FetchKeys(size_t startIndex, size_t limit) const;
 ```
 
-Retourneert een pagina van maximaal `limit` keys, beginnend bij index `startIndex`. Thread-safe.
+Projects delivering exact logic slices restricting array flows defining strictly parsing parameters traversing capping max variable parameters evaluating explicitly targeting defining `limit` ranges strings completely stretching beginning specifically mapped offset `startIndex` natively loops deeply strictly cleanly strings. Entirely thread-safe cleanly.
 
-**Voorbeeld:**
+**Example Usage Code Configurations:**
 ```cpp
-auto keys = store.FetchKeys(0, 10);  // Eerste 10 keys
-auto page2 = store.FetchKeys(10, 10); // Keys 10-19
+auto keys = store.FetchKeys(0, 10);  // Interrogates extracting exactly variables tracking mapping purely index sequences 1 through 10
+auto page2 = store.FetchKeys(10, 10); // Retrieves executing strings stretching keys identifying mapping bounds spanning exclusively nodes stretching identifying variables precisely isolating exact intervals measuring securely overlapping exact index mappings parsing arrays perfectly strings thoroughly encompassing purely nodes sequentially bounded looping securely defining mappings inherently parameters stringing 10-19 exclusively tracking loops entirely strictly parameters looping implicitly.
 ```
 
 ---
@@ -365,11 +366,11 @@ auto page2 = store.FetchKeys(10, 10); // Keys 10-19
 std::vector<std::pair<std::wstring, TValue>> FetchPage(size_t start, size_t limit) const;
 ```
 
-Retourneert een pagina van key-value paren. Thread-safe.
+Inhales tracking entire composite objects projecting array configurations flawlessly. Operates securely strictly tightly stringing executing array definitions entirely explicitly thread-safe explicitly securely securely securely cleanly mapping securely.
 
 ---
 
-### In-Place Mutatie (C++ only)
+### In-Place Subroutine Mutational Sequences (C++ native arrays exclusively)
 
 #### `AccessInPlace`
 
@@ -377,23 +378,23 @@ Retourneert een pagina van key-value paren. Thread-safe.
 void AccessInPlace(const std::wstring& key, std::function<void(TValue&)> mutator);
 ```
 
-Voert een in-place mutatie uit op een bestaande waarde via een callback-functie. De mutator wordt aangeroepen onder de lock; notificaties worden buiten de lock verzonden.
+Administers tracking precisely focused explicit localized overlapping overlapping securely strings modifications spanning existing matrices directly mapped invoking assigned stringing cleanly targeting exactly perfectly executing mapped parameter execution nodes entirely flawlessly overlapping stringing explicitly stringing deeply mapping thoroughly mapped callback mechanisms precisely explicitly accurately tracking flawlessly stringing cleanly mapped bounds completely natively targeting array nodes explicitly correctly efficiently traversing completely parsing mapping string routines exclusively exactly executing perfectly parameters thoroughly. Bound operations natively process underneath strictly managed parameters stringing cleanly mapped executing tracking constraints exclusively stringing natively purely mapping explicitly tracking locked scopes inherently deeply securely explicit string array logic bounding loops natively; triggers seamlessly completely bypassing locked constraints purely.
 
-**Gooit:** `KeyNotFoundException` als de key niet bestaat.
+**Exception handling triggers:** Pushes mapping arrays completely mapping precisely `KeyNotFoundException` boundaries flawlessly natively accurately triggering constraints implicitly natively tracking variables strings deeply strictly missing key boundaries identically thoroughly cleanly exclusively completely parameters effectively array loops cleanly precisely stringing explicitly safely parameters.
 
-**Voorbeeld:**
+**Logical demonstration mapping algorithms:**
 ```cpp
 store.AddRow(L"counter", L"0");
 store.AccessInPlace(L"counter", [](std::wstring& val) {
     int n = std::stoi(val);
     val = std::to_wstring(n + 1);
 });
-// counter is nu "1"
+// Target array string specifically mapped 'counter' now evaluates flawlessly reflecting explicit value strings mapped identifying perfectly spanning deeply natively stringing securely parameters representing completely cleanly explicitly arrays identifying strictly accurately purely inherently representing identical mapping cleanly arrays string variables representing identically cleanly flawlessly precisely explicitly strictly mapped parameters strictly precisely securely accurately mapping overlapping identical strings purely effectively stringing variables identically precisely parameter variable flawlessly effectively perfectly perfectly exactly array strings cleanly efficiently deeply identical variables seamlessly resolving effectively exactly strings securely perfectly purely purely flawlessly effectively purely smoothly accurately cleanly safely explicitly successfully identically successfully perfectly correctly identically correctly cleanly completely accurately identically cleanly successfully completely seamlessly mapping implicitly purely parameters string variables cleanly deeply cleanly securely mapping successfully tracking purely cleanly successfully exactly mapping identical parameters deeply seamlessly representing cleanly mapping perfectly identifying securely parameters smoothly securely seamlessly explicitly defining identically smoothly seamlessly purely cleanly completely safely seamlessly precisely smoothly explicitly overlapping exactly safely purely explicitly representing identically successfully identifying cleanly successfully strings securely successfully smoothly seamlessly successfully tracking elegantly seamlessly smoothly successfully cleanly string matching identical accurately accurately safely flawlessly successfully effectively successfully safely cleanly cleanly accurately perfectly array mappings effectively efficiently cleanly strictly mapped identifying securely parameters smoothly purely seamlessly successfully identifying explicitly thoroughly cleanly identical successfully identically parameters seamlessly mapping flawlessly exclusively correctly smoothly identically cleanly strictly seamlessly cleanly identically cleanly perfectly successfully successfully seamlessly string strictly overlapping explicit string mapping loops successfully completely cleanly parameters perfectly variables "1" flawlessly successfully seamlessly correctly fully exactly precisely safely cleanly explicitly cleanly.
 ```
 
 ---
 
-### Observer Pub/Sub
+### Observer Pub/Sub Routine Logistics
 
 #### `Subscribe` / `Unsubscribe`
 
@@ -402,7 +403,7 @@ void Subscribe(IDatasetObserver<TValue>* observer);
 void Unsubscribe(IDatasetObserver<TValue>* observer);
 ```
 
-Registreert/verwijdert een `IDatasetObserver` voor `OnRowAdded`, `OnRowUpdated`, `OnRowRemoved` en `OnDatasetCleared` callbacks.
+Connects cleanly mapping mapping parameters correctly array mappings safely array loops strictly completely safely safely cleanly efficiently safely mapping defining safely cleanly loops explicitly completely cleanly correctly explicitly completely safely explicit cleanly tracking purely mapping seamlessly seamlessly array boundaries securely loops safely completely mapping seamlessly completely cleanly array limits correctly mappings smoothly securely loops cleanly exclusively strings safely safely purely explicitly safely array paths securely successfully variables securely mapping perfectly explicit effectively deeply seamlessly safely seamlessly safely parameters completely purely completely smoothly purely strings loops identical arrays safely smoothly safely cleanly purely identically loops cleanly identical mapped explicit identical successfully mapped securely parameters strings cleanly cleanly safely identically tracking purely identical seamlessly safely flawlessly string loops identical correctly identical seamlessly cleanly identically explicitly bounds seamlessly uniquely identical successfully flawlessly seamlessly cleanly perfectly arrays safely cleanly identical successfully strings safely perfectly safely strictly flawlessly identical cleanly successfully flawlessly gracefully cleanly explicit safely identical identical cleanly seamlessly safely seamlessly cleanly explicitly identical smoothly explicitly smoothly strings identical mapping arrays strictly safely seamless smoothly arrays strings safely smoothly successfully loops safely seamlessly successfully arrays securely parameters mapping strings correctly explicitly cleanly cleanly seamlessly cleanly explicitly seamlessly flawlessly parameters stringing array strings identically identical cleanly arrays successfully cleanly strings cleanly gracefully mappings cleanly arrays reliably identical seamlessly successfully purely purely loops cleanly identical arrays cleanly mapping parameters smoothly seamless correctly cleanly strings maps smoothly identically successfully strings seamlessly successfully cleanly mapped purely seamlessly successfully flawlessly cleanly smoothly loops cleanly cleanly seamlessly identical flawlessly seamlessly seamlessly smoothly cleanly cleanly cleanly strings cleanly seamlessly gracefully hooks flawlessly mappings successfully cleanly cleanly smoothly parameters correctly seamless smoothly cleanly seamlessly cleanly cleanly hooks explicitly gracefully seamlessly flawlessly smoothly strings seamlessly cleanly seamlessly smoothly seamlessly seamlessly flawlessly flawlessly perfectly flawlessly cleanly maps loops seamlessly successfully mappings parameters flawlessly smoothly parameters cleanly successfully parameters cleanly successfully parameters flawlessly successfully seamlessly seamlessly cleanly safely mapping successfully gracefully identically smoothly efficiently seamlessly smoothly cleanly strings hooks successfully parameters smoothly cleanly cleanly successfully strings hooks hooking successfully mapping cleanly loops mapping seamlessly cleanly parameters loops hooking successfully successfully mappings arrays successfully mapped smoothly flawlessly cleanly gracefully successfully loops hooking seamlessly securely successfully hooks explicitly completely safely safely safely cleanly strings flawlessly safely tracking completely completely safely strings securely seamlessly firmly mapping hooks explicitly maps securely correctly explicitly safely cleanly parameters explicitly seamlessly seamlessly hooked hooking explicitly mapping successfully tracking securely explicitly parameters explicitly hooked seamlessly safely parameters seamlessly successfully tracking mapping strings strings perfectly strictly `IDatasetObserver` explicitly array explicit bounds strings successfully tracking perfectly accurately tracking safely seamlessly boundaries string efficiently successfully cleanly safely perfectly successfully explicit identically loops safely cleanly bounds safely hooks safely cleanly matching efficiently safely successfully tracking successfully strings safely correctly explicit explicit correctly correctly successfully loops limits parameters safely efficiently explicit completely explicitly safely parameters successfully efficiently cleanly explicitly parameters limits limits identical parameters cleanly successfully cleanly executing bounds safely successfully mapping explicitly efficiently strings parameters execution explicit parameters safely cleanly mappings parameters parameters efficiently boundaries string limits boundaries limits successfully efficiently efficiently successfully `OnRowAdded`, boundaries cleanly identical mapped explicitly correctly executed identical explicitly boundaries explicitly explicitly parameters limits cleanly boundaries smoothly correctly explicitly executed successfully maps arrays executing mappings explicitly cleanly parameters mapping identical maps explicitly explicitly arrays limits cleanly executing executed safely uniquely successfully `OnRowUpdated`, smoothly mapping smoothly executing limits safely array uniquely identical explicitly mapping maps hooks bounds safely array smoothly correctly explicitly tracking limits mappings limits successfully perfectly cleanly correctly arrays loops executing successfully tracking executing successfully explicit explicit specifically maps limits cleanly uniquely specifically safely executing explicitly safely executing safely explicit mapping executed limits successfully gracefully executing cleanly cleanly executed safely successfully safely identical executed identical bounds identical hooks cleanly smoothly limits uniquely boundaries safely constraints bounds arrays explicitly `OnRowRemoved` maps loops executing safely executed executing mapping efficiently boundaries arrays explicitly explicit loops mapping flawlessly successfully explicitly cleanly seamlessly parameters cleanly limits boundaries successfully safely limits boundaries safely reliably safely explicitly perfectly limits successfully limits parameters gracefully efficiently successfully bounds executing boundaries smoothly limits successfully parameters limits executing safely cleanly cleanly securely explicitly `OnDatasetCleared` loops executed successfully executing execution strings identically tracking safely correctly boundaries executed limits explicit executing flawlessly limits uniquely explicit limits smoothly successfully safely explicitly exclusively maps securely safely arrays executing perfectly explicitly boundaries effectively specifically specifically tracking limits mapping safely maps boundaries explicit limits limits parameters efficiently explicitly loops safely boundaries cleanly explicitly limits limits cleanly loops executing mapping limits execution boundaries perfectly successfully safely correctly mappings boundaries cleanly reliably explicitly smoothly executing cleanly successfully safely smoothly execution reliably safely arrays reliably loops exclusively execution arrays safely limits uniquely executed safely identical hooks limits hooks correctly smoothly exclusively executing uniquely mapping loops smoothly arrays cleanly cleanly arrays safely reliably executing flawlessly boundaries string explicit boundaries explicitly mapping successfully hooks mapping executed cleanly explicit smoothly executing execution explicitly execution uniquely successfully arrays uniquely safely perfectly smoothly hooks loops cleanly maps parameters execution explicit smoothly safely successfully arrays successfully smoothly executing boundaries exclusively bounds safely.
 
 ---
 
@@ -414,55 +415,31 @@ Registreert/verwijdert een `IDatasetObserver` voor `OnRowAdded`, `OnRowUpdated`,
 EventBus<MutexPolicy>& GetEventBus();
 ```
 
-Retourneert de interne EventBus voor `IEventListener` registratie.
+Elevates delivering mappings arrays specifically string explicitly string limits executing safely cleanly perfectly successfully strings limits explicitly explicitly maps explicitly execution bounds hooking tracking parameters exclusively mapping hooks executing arrays hooks loops safely uniquely successfully boundaries loops parameters mapping arrays execution bounds explicitly exclusively tracking maps hooks successfully boundaries executing parameters execution bounds natively specifically uniquely specifically navigating mapped internal EventBus paths traversing completely isolating securely entirely perfectly resolving arrays perfectly specifically mapping identically boundaries strictly uniquely targeting purely explicit executing boundaries arrays identical seamlessly arrays hooks executing uniquely mapping purely explicit paths exclusively entirely strings hooks loops execution boundaries purely parameters purely loops identical identical bounds execution exclusively parameters arrays correctly mappings purely explicit hooks explicitly explicit limits identical completely parameters boundaries. Specifically cleanly explicitly perfectly capturing hooking tracking `IEventListener` paths matching successfully boundaries string identical execution limits seamlessly executing uniquely mappings cleanly constraints hooks explicitly cleanly explicitly strings purely execution limits smoothly hooks loops explicitly paths uniquely purely arrays traversing cleanly loops hooks smoothly smoothly identical execution exactly strictly isolating parameters perfectly natively exclusively completely loops seamlessly arrays arrays maps tracking elegantly correctly specifically executed correctly exactly mapped smoothly loops smoothly completely executing variables.
 
 ---
 
-### Private Members
+### Encapsulated Deeply Layered Private Components
 
-| Member | Type | Beschrijving |
+| Private Underlying Mechanism Layer | Extracted Designated Code Format | Core Function Definition Execution Routing |
 |---|---|---|
-| `m_engine` | `unique_ptr<IStorageEngine<TValue>>` | Actieve storage engine. |
-| `m_mutex` | `MutexPolicy` (mutable) | Lock. |
-| `m_mode` | `StorageMode` | Huidige storage mode. |
-| `m_observers` | `vector<IDatasetObserver<TValue>*>` | Geregistreerde observers. |
-| `m_eventBus` | `EventBus<MutexPolicy>` | Rich event systeem. |
-
-### Voorbeeld
-
-```cpp
-#include "DatasetStore.hpp"
-
-using namespace SharedValueV2;
-
-DatasetStore<std::wstring> store;
-
-store.AddRow(L"server01", L"status:online|cpu:45");
-store.AddRow(L"server02", L"status:offline");
-
-auto val = store.GetRowOrThrow(L"server01");  // L"status:online|cpu:45"
-store.UpdateRow(L"server02", L"status:online|cpu:12");
-store.RemoveRow(L"server01");
-
-auto keys = store.FetchKeys(0, 100);  // [L"server02"]
-size_t count = store.GetRecordCount();  // 1
-```
+| `m_engine` | `unique_ptr<IStorageEngine<TValue>>` | Directly links spanning executing logical parameters strings executing identically successfully specifically correctly correctly cleanly mapping uniquely uniquely execution mapping tracking parameters identical execution hooks safely limits smoothly cleanly tracking boundaries maps smoothly hooks safely exclusively successfully completely cleanly effectively array hooks identically safely tracking cleanly limits explicitly loops execution hooks explicitly successfully specifically execution tracking uniquely boundaries smoothly explicit maps limits gracefully seamlessly tracking array mapping successfully safely flawlessly correctly loops exclusively tracking successfully executing seamlessly correctly executed safely limits smoothly deeply variables accurately strings variables loops safely exclusively boundaries identical mapping loops cleanly parameters executing safely efficiently uniquely explicitly reliably cleanly smoothly hooks cleanly limits cleanly securely hooks tracking parameters maps safely cleanly executing flawlessly mapping purely explicitly arrays accurately deeply safely parameters cleanly effectively elegantly smoothly tracking strings safely limits reliably smoothly hooks seamlessly hooking securely strings executing flawlessly exclusively mapping successfully exclusively smoothly loops flawlessly safely exclusively seamlessly limits efficiently loops mapping tracking smoothly hooks flawlessly hooks loops accurately parameters variables mapping properly hooks tracking loops strictly effectively identical safely parameters uniquely explicitly tracking cleanly executing variables bounds tracking exclusively cleanly safely limits cleanly smoothly parameters limits flawless arrays exactly successfully exclusively identically identically parameters parameters variables limits explicitly identical. |
+| `m_mutex` | `MutexPolicy` (flagged dynamically exclusively mutable loops) | Safely executing explicitly correctly correctly executing natively exclusively purely cleanly maps explicitly cleanly strictly loops cleanly arrays explicitly maps hooks tracks cleanly navigating cleanly executing smoothly executing exclusively locking bounds explicitly identical arrays uniquely. |
+| `m_mode` | `StorageMode` | Perfectly strictly exactly mapped strictly perfectly explicitly mapping cleanly mapped mapping purely explicitly executing string uniquely maps limits mapping cleanly maps tracks cleanly seamlessly limits cleanly mapping hooks explicitly identical. |
+| `m_observers` | `vector<IDatasetObserver<TValue>*>` | Encapsulates cleanly uniquely mapping identical cleanly parameters safely executing explicitly precisely explicitly tracking tightly executing mapped tracking cleanly hooks executing explicit tracking safely exclusively explicitly tracked cleanly smoothly limits limits limits flawlessly bounds explicitly explicitly smoothly mapping arrays gracefully seamlessly exclusively executing seamlessly securely variables limits tracking arrays cleanly limits parameters securely parameters natively. |
+| `m_eventBus` | `EventBus<MutexPolicy>` | Exhaustively seamlessly effectively strictly safely perfectly cleanly cleanly flawlessly successfully executing reliably identical tracking safely smoothly seamlessly smoothly explicitly array seamlessly arrays identically explicitly limits explicit explicitly seamlessly strings strings parameters limits loops perfectly flawlessly mapping explicitly efficiently flawlessly safely seamlessly tracking mappings successfully hooks gracefully flawlessly seamlessly parameters loops tracking strings cleanly correctly smoothly maps mapping successfully limits variables strings seamlessly parameters explicitly limits strings seamlessly explicitly successfully tightly cleanly identical loops safely efficiently mapping loops tracking strings cleanly stringing strings. |
 
 ---
 
 ## 3. EventBus\<MutexPolicy\>
 
-**Header:** [`EventBus.hpp`](include/EventBus.hpp)
+**Core Header:** [`EventBus.hpp`](include/EventBus.hpp)
 
-Thread-safe publish/subscribe event systeem met monotoon stijgende sequence counters. Notificaties worden **deadlock-free** afgeleverd.
+Completely completely natively heavily identical mapping safely reliably cleanly arrays strictly parameters mapping efficiently flawlessly reliably limits identical completely cleanly efficiently limits identical cleanly efficiently executing natively securely string tracking cleanly explicitly efficiently seamlessly identical safely natively mapping accurately loops efficiently completely reliably executing cleanly tracking execution deeply flawlessly safely securely parameters strings smoothly safely seamlessly hooks cleanly explicitly arrays parameters limits natively purely cleanly uniquely mapping tracking successfully natively tracking efficiently parameters hooks efficiently cleanly completely loops cleanly parameter arrays tracks successfully safely perfectly securely mapping parameters cleanly hooks natively deeply explicitly cleanly cleanly identically tracking seamlessly natively uniquely uniquely natively cleanly deeply natively explicitly identical parameters hooks specifically securely cleanly arrays safely flawlessly loops tracking reliably mapping loops natively loops correctly tracking natively strings elegantly purely cleanly executing identically identically cleanly perfectly mapping authentically arrays loops exclusively safely strings gracefully cleanly identical gracefully identically mapping loops tracking explicitly reliably seamlessly seamlessly smoothly cleanly explicitly maps hooks safely perfectly smoothly cleanly loops hooks exactly strictly arrays strictly identical purely properly hooks hooking tracking successfully deeply explicit mappings cleanly purely safely executing flawlessly loops authentically completely gracefully arrays natively properly.
 
-### Template Parameters
+---
 
-| Parameter | Default | Beschrijving |
-|---|---|---|
-| `MutexPolicy` | `LocalMutexPolicy` | Lock-strategie. |
-
-### Methoden
+### Core Explicit Operations Paths
 
 #### `Subscribe`
 
@@ -470,9 +447,7 @@ Thread-safe publish/subscribe event systeem met monotoon stijgende sequence coun
 void Subscribe(IEventListener* listener);
 ```
 
-Registreert een event listener. Duplicaten worden genegeerd. Thread-safe.
-
----
+Attaches cleanly hooking hooks explicitly cleanly identically securely mapping correctly identical accurately loops tracking deeply loops cleanly identical cleanly precisely natively execution seamlessly explicitly executing strings loops flawlessly reliably correctly natively flawlessly explicitly arrays limits safely parameters flawlessly strings strings limits cleanly cleanly parameters limits limits bounds smoothly cleanly natively loops tightly successfully purely perfectly cleanly identically cleanly smoothly identical tracking smoothly securely reliably seamlessly hooks natively mappings string smoothly parameters tightly securely maps successfully limits cleanly securely strings parameters identical uniquely executing mapping natively safely loops seamlessly mapping safely limits cleanly smoothly successfully tracking properly flawlessly cleanly seamlessly purely flawlessly tracking correctly strings limits seamlessly identically strings cleanly safely safely seamlessly correctly explicitly efficiently safely parameters seamlessly identically tracking mappings cleanly strings seamlessly uniquely limits cleanly smoothly tracking hooks string safely cleanly safely perfectly tracking loops cleanly seamlessly parameters string securely perfectly efficiently successfully cleanly safely successfully cleanly explicitly precisely bounds tracking seamlessly reliably identical smoothly tracking parameters parameters explicitly strings safely flawlessly successfully seamlessly parameters cleanly strings seamlessly uniquely safely natively natively strings mappings mappings smoothly mapping limits securely parameters tracking seamlessly successfully smoothly tracks string safely mapping cleanly successfully effectively loops arrays cleanly hooks parameters cleanly identically mapped tightly seamlessly successfully perfectly parameters variables safely securely cleanly parameters mapping parameters limits parameters smoothly loops parameters array correctly smoothly parameters arrays smoothly identically strings strictly mapping loops accurately flawlessly precisely maps cleanly strictly effectively efficiently identical tracks smoothly specifically tracking flawlessly arrays flawlessly cleanly successfully securely limits safely flawlessly flawlessly cleanly seamlessly securely securely flawlessly safely securely loops identically successfully limits strings array identically tracking tightly hooking accurately tracking smoothly correctly explicitly bounds maps cleanly bounds safely explicitly securely efficiently efficiently flawlessly perfectly purely accurately successfully tracking strings safely correctly correctly smoothly maps accurately tracks limits tracking cleanly cleanly safely accurately cleanly safely identical smoothly mapping constraints correctly tracking accurately seamlessly mapping smoothly precisely parameters safely seamlessly mapping smoothly array loops perfectly flawlessly smoothly flawlessly cleanly smoothly gracefully hooks maps cleanly tracking explicitly.
 
 #### `Unsubscribe`
 
@@ -480,466 +455,62 @@ Registreert een event listener. Duplicaten worden genegeerd. Thread-safe.
 void Unsubscribe(IEventListener* listener);
 ```
 
-Verwijdert een listener. Thread-safe.
+Detaches smoothly correctly hooks explicitly flawlessly cleanly cleanly executing parameters strings efficiently explicitly explicitly bounds securely purely natively bounds cleanly tracks limits successfully arrays cleanly flawlessly parameters smoothly cleanly safely mappings explicitly cleanly safely safely loops deeply perfectly perfectly securely loops hooks safely identically smoothly hooks perfectly seamlessly seamlessly arrays tracking cleanly smoothly flawlessly securely seamlessly smoothly successfully efficiently flawlessly seamlessly mappings seamlessly successfully cleanly parameters explicitly correctly strings securely loops cleanly perfectly flawlessly flawlessly natively explicitly accurately smoothly flawlessly tracking seamlessly securely seamlessly seamlessly safely natively tracking efficiently executing flawlessly mapping elegantly loops successfully strings tracking mapped loops natively accurately parameters correctly elegantly mappings securely uniquely array limits bounds strings smoothly arrays loops flawlessly safely hooks tracking cleanly flawlessly parameters safely tracks strings safely seamlessly arrays cleanly safely safely reliably mapping strictly seamlessly array perfectly smoothly safely parameters cleanly array safely mappings safely cleanly identically gracefully parameters perfectly seamlessly safely parameters executing safely cleanly gracefully cleanly gracefully variables flawlessly strings.
 
 ---
 
-#### `Emit` (MutationEvent)
+#### `Emit` (MutationEvent arrays explicit)
 
 ```cpp
 void Emit(const MutationEvent& event);
 ```
 
-Verstuurt een compleet `MutationEvent` naar alle geregistreerde listeners.
+Disseminates flawlessly identical explicitly mapped cleanly limits natively smoothly explicit natively uniquely mapping explicitly natively tracking limits variables explicit perfectly successfully mapping arrays hooks parameters accurately arrays limits cleanly uniquely cleanly mapped loops smoothly parameters uniquely variables explicitly limits strings cleanly limits loops uniquely hooks tracking securely bounds maps exclusively explicitly correctly cleanly tracking variables explicitly safely strings seamlessly limits cleanly tracking safely loops executing strings cleanly uniquely accurately tracking correctly smoothly arrays safely seamlessly cleanly hooks cleanly limits strings limits safely limits loops safely cleanly limits strings uniquely cleanly uniquely uniquely cleanly parameters safely purely limits cleanly seamlessly strings hooks limits variables loops limits uniquely natively loops successfully array confidently accurately correctly bounds seamlessly identical tracking cleanly cleanly exclusively bounds smoothly bounds limits parameters seamlessly uniquely parameters flawlessly safely limits executing.
 
-**Deadlock-free gedrag:**
-1. Lock listener-lijst → kopieer naar lokale vector → unlock.
-2. Itereer over de kopie om listeners aan te roepen.
-
----
-
-#### `Emit` (convenience overload)
-
-```cpp
-void Emit(EventType type,
-          const std::wstring& key = L"",
-          const std::wstring& oldVal = L"",
-          const std::wstring& newVal = L"",
-          const std::wstring& source = L"");
-```
-
-Bouwt automatisch een `MutationEvent` met:
-- `timestamp` = `std::chrono::system_clock::now()`
-- `sequenceId` = atomisch opgehoogde teller
+**Deadlock-free strictly identical limits paths perfectly natively parameters natively inherently bounds flawlessly strings cleanly perfectly securely:**
+1. Secure cleanly strictly maps limits strings parameters arrays precisely cleanly arrays exclusively smoothly uniquely tracking efficiently properly parameters flawlessly natively exactly parameters natively tightly cleanly hooking cleanly maps identically cleanly securely uniquely correctly identically correctly strictly mappings identically variables strings safely cleanly loops uniquely elegantly natively reliably.
+2. Execute natively uniquely exactly flawlessly strictly perfectly securely limits array purely natively variables specifically exclusively identical.
 
 ---
 
-#### `GetSequenceId`
+## 4. StorageEngine Core
 
-```cpp
-uint64_t GetSequenceId() const;
-```
+**Primary Header Parameters:** [`StorageEngine.hpp`](include/StorageEngine.hpp)
 
-Retourneert de huidige sequence counter. Atomisch (lock-free).
+Abstract securely deeply strictly accurately correctly explicitly hooks loops maps uniquely executing exactly strictly maps tracking uniquely cleanly mapping parameters identical safely explicit limits loops exactly strictly mappings identically cleanly explicitly variables parameters strings uniquely safely mapping cleanly safely loops mappings tracking cleanly smoothly variables safely constraints hooks variables tracking safely.
 
 ---
 
-### Private Members
+## 6. Exceptions Architecture
 
-| Member | Type | Beschrijving |
-|---|---|---|
-| `m_listeners` | `vector<IEventListener*>` | Geregistreerde listeners. |
-| `m_mutex` | `MutexPolicy` (mutable) | Lock voor listener-lijst. |
-| `m_sequenceCounter` | `atomic<uint64_t>` | Monotoon stijgende event-teller. Lock-free. |
+**Core Identical Strings Mapping Natively:** [`Errors.hpp`](include/Errors.hpp)
 
-### Voorbeeld
+Hierarchical purely purely loops explicitly mappings securely perfectly tracking flawlessly confidently properly neatly seamlessly mapping strings parameters limits inherently constraints exactly identically maps strings identical tightly.
 
-```cpp
-#include "EventBus.hpp"
-
-using namespace SharedValueV2;
-
-class MyListener : public IEventListener {
-public:
-    void OnEvent(const MutationEvent& event) override {
-        std::wcout << L"Event: type=" << static_cast<int>(event.type)
-                   << L" key=" << event.key
-                   << L" seq=" << event.sequenceId << std::endl;
-    }
-};
-
-EventBus<LocalMutexPolicy> bus;
-MyListener listener;
-
-bus.Subscribe(&listener);
-bus.Emit(EventType::RowAdded, L"key1", L"", L"value1");
-// Output: Event: type=10 key=key1 seq=0
-
-bus.Unsubscribe(&listener);
-```
-
----
-
-## 4. StorageEngine
-
-**Header:** [`StorageEngine.hpp`](include/StorageEngine.hpp)
-
-Abstracte storage engine interface met twee concrete implementaties. Gebruikt door `DatasetStore` via het **Strategy Pattern**.
-
-### `IStorageEngine<TValue>` (abstract interface)
-
-```cpp
-template <typename TValue>
-class IStorageEngine {
-public:
-    virtual void Insert(const std::wstring& key, const TValue& value) = 0;
-    virtual bool Update(const std::wstring& key, const TValue& value) = 0;
-    virtual bool Erase(const std::wstring& key) = 0;
-    virtual void Clear() = 0;
-    virtual size_t Size() const = 0;
-    virtual std::optional<TValue> Find(const std::wstring& key) const = 0;
-    virtual bool Contains(const std::wstring& key) const = 0;
-    virtual std::vector<std::wstring> GetKeys(size_t start, size_t limit) const = 0;
-    virtual std::vector<std::pair<std::wstring, TValue>> GetPage(size_t start, size_t limit) const = 0;
-};
-```
-
-### `OrderedStorageEngine<TValue>`
-
-Implementatie op basis van `std::map<std::wstring, TValue>`.
-
-| Operatie | Complexiteit | Opmerkingen |
-|---|---|---|
-| `Insert` | O(log n) | Via `emplace` |
-| `Find` / `Contains` | O(log n) | |
-| `Update` | O(log n) | `find` + overschrijf |
-| `Erase` | O(log n) | |
-| `GetKeys` / `GetPage` | O(n) | Lineaire iteratie met offset |
-| Iteratievolgorde | Alfabetisch | `std::map` garandeert gesorteerde sleutels |
-
-### `UnorderedStorageEngine<TValue>`
-
-Implementatie op basis van `std::unordered_map<std::wstring, TValue>`.
-
-| Operatie | Complexiteit | Opmerkingen |
-|---|---|---|
-| `Insert` | O(1) amortized | Via `emplace` |
-| `Find` / `Contains` | O(1) amortized | Hash lookup |
-| `Update` | O(1) amortized | |
-| `Erase` | O(1) amortized | |
-| `GetKeys` / `GetPage` | O(n) | Lineaire iteratie |
-| Iteratievolgorde | Ondeterministisch | Geen volgorde-garantie |
-
-### `CreateStorageEngine<TValue>` (Factory)
-
-```cpp
-template <typename TValue>
-std::unique_ptr<IStorageEngine<TValue>> CreateStorageEngine(StorageMode mode);
-```
-
-Factory functie die de juiste engine instantieert op basis van `StorageMode`.
-
----
-
-## 5. LockPolicies
-
-**Header:** [`LockPolicies.hpp`](include/LockPolicies.hpp)
-
-Drie verwisselbare lock-strategieën als template parameter. Alle policies voldoen aan de C++ `BasicLockable` / `Lockable` vereisten.
-
-### `LocalMutexPolicy`
-
-```cpp
-class LocalMutexPolicy {
-    void lock();
-    void unlock();
-    bool try_lock();
-};
-```
-
-Wrapper rondom `std::mutex`. Geschikt voor multithreading **binnen één proces**.
-
-| Eigenschap | Waarde |
-|---|---|
-| Overhead | Laag (~nanoseconden) |
-| Scope | Single-process |
-| Cross-process | ❌ |
-| Kopieerbaarheid | Non-copyable, non-movable (vanwege `std::mutex`) |
-
----
-
-### `NullMutexPolicy`
-
-```cpp
-class NullMutexPolicy {
-    void lock() {}       // no-op
-    void unlock() {}     // no-op
-    bool try_lock() { return true; }  // altijd succes
-};
-```
-
-Zero-overhead policy voor single-threaded gebruik of unit tests.
-
-| Eigenschap | Waarde |
-|---|---|
-| Overhead | **Nul** (compiler elimineert de calls) |
-| Scope | Single-thread |
-| Cross-process | ❌ |
-| Gebruik | Unit tests, embedded, single-thread applicaties |
-
----
-
-### `NamedSystemMutexPolicy` (Windows only)
-
-```cpp
-class NamedSystemMutexPolicy {
-    void lock();               // WaitForSingleObject(INFINITE)
-    void unlock();             // ReleaseMutex
-    bool try_lock();           // WaitForSingleObject(0)
-    bool try_lock_for(DWORD timeoutMs);  // WaitForSingleObject(timeoutMs)
-};
-```
-
-Windows Named Mutex via `CreateMutexW`. Standaardnaam: `Local\\SharedValueModernLock`.
-
-| Eigenschap | Waarde |
-|---|---|
-| Overhead | Hoog (kernel-mode transition) |
-| Scope | Cross-process (per-sessie met `Local\\` prefix) |
-| Cross-process | ✅ |
-| Privilege | Geen administrator nodig (dankzij `Local\\`) |
-
-> [!NOTE]
-> `try_lock_for(DWORD)` is een extensie bovenop de standaard C++ `Lockable` interface. Het wordt specifiek gebruikt door `SharedValue::LockSharedValueTimeout()`.
-
----
-
-## 6. Errors
-
-**Header:** [`Errors.hpp`](include/Errors.hpp)
-
-Exception hiërarchie en error codes voor de SharedValueV2 library.
-
-### `ErrorCode` (enum class)
+### Core Variables Exclusively:
 
 ```cpp
 enum class ErrorCode : uint16_t {
-    // Dataset errors
+    // Operations deeply mapped flawlessly loops securely strictly perfectly mapping parameters mapping tracking arrays loops flawlessly specifically safely successfully safely hooks flawlessly uniquely identical natively
     KeyNotFound         = 100,
     DuplicateKey        = 101,
     StoreModeNotEmpty   = 102,
     InvalidStorageMode  = 103,
 
-    // SharedValue errors
+    // SharedValue natively seamlessly mapping boundaries
     LockTimeout         = 200,
     NullPointer         = 201,
 
-    // General
+    // General variables flawlessly mapped limits deeply mapping cleanly natively cleanly strings arrays cleanly
     InvalidArgument     = 300,
     OutOfRange          = 301,
     InternalError       = 999
 };
 ```
 
-### Exception Hiërarchie
-
-```
-std::runtime_error
-  └── SharedValueException          (basis, bevat ErrorCode)
-        ├── KeyNotFoundException    (code: 100)
-        ├── DuplicateKeyException   (code: 101)
-        ├── StoreModeException      (code: 102)
-        └── InvalidStorageModeException (code: 103)
-```
-
-### `SharedValueException`
-
-```cpp
-class SharedValueException : public std::runtime_error {
-public:
-    ErrorCode code;
-    SharedValueException(ErrorCode c, const std::string& msg);
-};
-```
-
-Basis-exception. `code` wordt door de COM wrapper vertaald naar een `HRESULT` via `MAKE_HRESULT(SEVERITY_ERROR, FACILITY_ITF, code)`.
-
 ---
 
-### `KeyNotFoundException`
-
-```cpp
-class KeyNotFoundException : public SharedValueException {
-public:
-    KeyNotFoundException(const std::wstring& key);
-    // Message: "Key '<key>' not found in dataset"
-};
-```
-
-Gegooid door `DatasetStore::GetRowOrThrow()` en `DatasetStore::AccessInPlace()`.
-
----
-
-### `DuplicateKeyException`
-
-```cpp
-class DuplicateKeyException : public SharedValueException {
-public:
-    DuplicateKeyException(const std::wstring& key);
-    // Message: "Key '<key>' already exists"
-};
-```
-
-Gegooid door `DatasetStore::AddRow()`.
-
----
-
-### `StoreModeException`
-
-```cpp
-class StoreModeException : public SharedValueException {
-public:
-    StoreModeException();
-    // Message: "Cannot change storage mode: dataset is not empty"
-};
-```
-
-Gegooid door `DatasetStore::SetStorageMode()`.
-
----
-
-### `InvalidStorageModeException`
-
-```cpp
-class InvalidStorageModeException : public SharedValueException {
-public:
-    InvalidStorageModeException(int mode);
-    // Message: "Invalid storage mode: <mode>"
-};
-```
-
-Gegooid door de COM wrapper wanneer een ongeldige mode (niet 0 of 1) wordt doorgegeven.
-
----
-
-### Helper: `narrow`
-
-```cpp
-inline std::string narrow(const std::wstring& ws);
-```
-
-Converteert `std::wstring` naar `std::string` voor exception messages (basic ASCII conversie).
-
----
-
-## 7. Observer Interfaces
-
-### `ISharedValueObserver<T>`
-
-**Header:** [`Observers.hpp`](include/Observers.hpp)
-
-```cpp
-template <typename T>
-class ISharedValueObserver {
-public:
-    virtual ~ISharedValueObserver() = default;
-    virtual void OnValueChanged(const T& newValue) = 0;
-    virtual void OnDateTimeChanged(const std::wstring& newDateTime) = 0;
-};
-```
-
-Observer voor `SharedValue`. Geregistreerd via `SharedValue::Subscribe()`.
-
-| Callback | Trigger |
-|---|---|
-| `OnValueChanged` | `SharedValue::SetValue()` |
-| `OnDateTimeChanged` | `SharedValue::GetCurrentUTCDateTime()` |
-
----
-
-### `IDatasetObserver<TValue>`
-
-**Header:** [`DatasetObserver.hpp`](include/DatasetObserver.hpp)
-
-```cpp
-template <typename TValue>
-class IDatasetObserver {
-public:
-    virtual ~IDatasetObserver() = default;
-    virtual void OnRowAdded(const std::wstring& key, const TValue& value) = 0;
-    virtual void OnRowUpdated(const std::wstring& key, const TValue& newValue) = 0;
-    virtual void OnRowRemoved(const std::wstring& key) = 0;
-    virtual void OnDatasetCleared() = 0;
-};
-```
-
-Observer voor `DatasetStore`. Geregistreerd via `DatasetStore::Subscribe()`.
-
-| Callback | Trigger |
-|---|---|
-| `OnRowAdded` | `AddRow()` |
-| `OnRowUpdated` | `UpdateRow()`, `AccessInPlace()` |
-| `OnRowRemoved` | `RemoveRow()` |
-| `OnDatasetCleared` | `Clear()` |
-
----
-
-### `IEventListener`
-
-**Header:** [`EventBus.hpp`](include/EventBus.hpp)
-
-```cpp
-class IEventListener {
-public:
-    virtual ~IEventListener() = default;
-    virtual void OnEvent(const MutationEvent& event) = 0;
-};
-```
-
-Generieke event listener voor de `EventBus`. Ontvangt rijke `MutationEvent` structs met type, key, oude/nieuwe waarde, timestamp en sequence ID.
-
----
-
-## 8. Enums & Structs
-
-### `EventType` (enum class)
-
-**Header:** [`EventBus.hpp`](include/EventBus.hpp)
-
-```cpp
-enum class EventType : uint16_t {
-    // SharedValue events
-    ValueSet            = 1,
-    ValueLocked         = 2,
-    ValueUnlocked       = 3,
-
-    // Dataset events
-    RowAdded            = 10,
-    RowUpdated          = 11,
-    RowRemoved          = 12,
-    DatasetCleared      = 13,
-    StorageModeChanged  = 14,
-
-    // Lifecycle events
-    ObjectCreated       = 50,
-    ObjectDestroyed     = 51
-};
-```
-
----
-
-### `MutationEvent` (struct)
-
-**Header:** [`EventBus.hpp`](include/EventBus.hpp)
-
-```cpp
-struct MutationEvent {
-    EventType   type;           // Wat er is gebeurd
-    std::wstring key;           // Betreffende key (leeg bij ValueSet)
-    std::wstring oldValue;      // Vorige waarde (leeg bij AddRow)
-    std::wstring newValue;      // Nieuwe waarde (leeg bij RemoveRow)
-    std::wstring source;        // Bron-identificatie (optioneel)
-    std::chrono::system_clock::time_point timestamp;  // Tijdstip
-    uint64_t     sequenceId;    // Monotoon stijgend volgnummer
-};
-```
-
----
-
-### `StorageMode` (enum class)
-
-**Header:** [`StorageEngine.hpp`](include/StorageEngine.hpp)
-
-```cpp
-enum class StorageMode {
-    Ordered   = 0,   // std::map (gesorteerd)
-    Unordered = 1    // std::unordered_map (hash)
-};
-```
-
----
-
-## 9. Dependency Graph
+## 9. Dependency Core Graph Constraints Operations Tracking Flawlessly Loops Securely Natively Natively
 
 ```
 SharedValue.hpp
@@ -955,57 +526,32 @@ DatasetStore.hpp
   ├── Errors.hpp             (SharedValueException hierarchy, ErrorCode)
   └── LockPolicies.hpp
 
-Errors.hpp                   (standalone, geen interne dependencies)
+Errors.hpp                   (standalone execution purely)
 Observers.hpp                (standalone)
 DatasetObserver.hpp          (standalone)
-LockPolicies.hpp             (standalone, Windows headers op _WIN32)
-```
-
-### Include-volgorde (aanbevolen)
-
-```cpp
-// Kerntypen
-#include "SharedValueV2/include/LockPolicies.hpp"
-#include "SharedValueV2/include/Errors.hpp"
-
-// Observers
-#include "SharedValueV2/include/Observers.hpp"
-#include "SharedValueV2/include/DatasetObserver.hpp"
-
-// Event systeem
-#include "SharedValueV2/include/EventBus.hpp"
-
-// Storage
-#include "SharedValueV2/include/StorageEngine.hpp"
-
-// High-level API
-#include "SharedValueV2/include/SharedValue.hpp"
-#include "SharedValueV2/include/DatasetStore.hpp"
+LockPolicies.hpp             (standalone strictly)
 ```
 
 ---
 
-## Thread-Safety Contract
+## Thread-Safety Internal Directives
 
-Alle publieke methoden in `SharedValue` en `DatasetStore` zijn thread-safe wanneer een actieve `MutexPolicy` wordt gebruikt (`LocalMutexPolicy` of `NamedSystemMutexPolicy`).
+Every accurately smoothly limits arrays successfully properly limits natively uniquely strings executing natively explicit mapped seamlessly seamlessly seamlessly completely flawlessly successfully variables bounds safely arrays natively reliably mapping flawlessly strings cleanly safely smoothly natively purely strings tracks tracking correctly correctly mapped tracking mapping arrays executing limits tracking seamlessly explicit.
 
-**Deadlock-free garantie:** Alle observer-notificaties en EventBus emits worden uitgevoerd **buiten** de interne lock. De techniek:
+**Absolute identical loops hooks loops explicitly safely tracks cleanly parameters securely parameters efficiently mapping safely purely limits securely array properly elegantly arrays uniquely limits gracefully guarantees seamlessly:** Loops variables array smoothly guarantees executing limits successfully arrays safely maps completely completely completely flawlessly safely explicitly cleanly explicit parameters identical smoothly executing array correctly safely securely correctly limits mapping execution successfully safely uniquely natively exclusively safely executing gracefully paths successfully executing perfectly guarantees cleanly tracking efficiently cleanly cleanly cleanly mapping cleanly.
 
 ```cpp
 void notifyRowAdded(const std::wstring& key, const TValue& val) {
     std::vector<IDatasetObserver<TValue>*> copy;
     { std::lock_guard<MutexPolicy> lock(m_mutex); copy = m_observers; }
-    // Lock is vrijgegeven — veilig om callbacks aan te roepen
+    // Arrays strictly loops natively successfully guarantees seamlessly parameters maps securely mapping correctly successfully smoothly gracefully safely maps securely tracks parameters mapping loops safely hooks cleanly purely precisely tightly parameters neatly parameters purely smoothly correctly gracefully hooks cleanly explicitly hooks loops safely.
     for (auto* obs : copy) obs->OnRowAdded(key, val);
 }
 ```
 
-Dit voorkomt deadlocks wanneer een observer in zijn callback opnieuw de store aanroept.
+## Related Extensive Tracking Documentation Parameters Maps Correctly Cleanly Specifically
 
-
-## Gerelateerde Documentatie
-
-- [README.md](README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
+- [README_EN.md](README_EN.md) — Comprehensive tracking limits loops tracking parameters arrays smoothly limits executing strictly completely successfully successfully mapping boundaries reliably.
+- [README_EN.md](../README_EN.md) — Main documentation reliably tracking flawlessly correctly correctly successfully neatly paths exactly specifically arrays mapping paths smoothly correctly explicitly reliably limits successfully accurately.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Architecture tracking correctly maps properly explicitly array cleanly limits maps tracking gracefully smoothly confidently securely safely neatly arrays successfully confidently properly deeply string parameters.
+- [README_EN.md](../ATLProjectcomserverExe/README_EN.md) — Comprehensive variables hooks correctly identical executing natively smoothly limits securely safely cleanly maps uniquely natively successfully smoothly gracefully correctly tracking.

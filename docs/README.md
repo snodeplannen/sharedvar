@@ -1,26 +1,28 @@
-# Docs — Ontwerpdocumentatie
+# Docs — Design Documentation
 
-Achtergrondanalyses en ontwerpdocumenten die de architecturale beslissingen van dit project onderbouwen.
+Background analyses and design documents that substantiate the architectural decisions of this project.
 
-## Rol binnen het project
+## Role within the project
 
-Deze documenten dienen als historische referentie voor de technische keuzes die zijn gemaakt tijdens de ontwikkeling, met name de migratie van in-process DLL naar out-of-process EXE.
+These documents serve as historical references for the technical choices made during development, particularly the migration from an in-process DLL to an out-of-process EXE.
 
-## Bestandsoverzicht
+## File Overview
 
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `3_methods_for_inteprocess.md` | **Cross-Process Architecture Redesign** — Analyse van drie migratiestrategieën voor cross-process data-sharing: (1) Native Out-of-Process EXE (`LocalServer32`), (2) Windows DLL Surrogate (`dllhost.exe`), en (3) Shared Memory (`CreateFileMapping`). Bevat voor- en nadelen per optie en het uiteindelijke advies. |
+| `3_methods_for_inteprocess_EN.md` | **Cross-Process Architecture Redesign** — Analysis of three migration strategies for cross-process data sharing: (1) Native Out-of-Process EXE (`LocalServer32`), (2) Windows DLL Surrogate (`dllhost.exe`), and (3) Shared Memory (`CreateFileMapping`). Includes pros and cons per option and the final recommendation. |
+| `research_memmap_v3_disadvantages_mitigations_EN.md` | Examines architectural limitations of SharedValueV3 (MemMap) and outlines solutions for them. |
+| `research_memory_mapped_files_sharedvar_new_design_EN.md` | Deep dive into Memory-Mapped files performance vs COM server usage. |
 
 ## Context
 
-Dit document werd opgesteld toen het project nog uitsluitend als In-Process DLL opereerde. Het beschrijft de afweging die leidde tot de keuze voor **Optie 1 (ATL EXE)**, die vervolgens is geïmplementeerd in de [`ATLProjectcomserverExe/`](../ATLProjectcomserverExe/) directory.
+This documentation was drafted when the project operated exclusively as an In-Process DLL. It describes the evaluation that culminated in the selection of **Option 1 (ATL EXE)**, which was subsequently implemented in the [`ATLProjectcomserverExe/`](../ATLProjectcomserverExe/) directory.
 
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [3_methods_for_inteprocess.md](3_methods_for_inteprocess.md) — Achtergronddocument over de theorie achter Inter-Process Communication (IPC).
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [3_methods_for_inteprocess_EN.md](3_methods_for_inteprocess_EN.md) — Background document addressing the theory behind Inter-Process Communication (IPC).
+- [README_EN.md](../README_EN.md) — Main documentation and starting point of the entire project.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document for the entire COM Server project.
+- [README_EN.md](../ATLProjectcomserverExe/README_EN.md) — User guide and overview of the EXE COM Server variant.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.

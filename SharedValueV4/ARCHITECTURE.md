@@ -1,34 +1,34 @@
-# SharedValueV3_MemMap — Architectuurdocument
+# SharedValueV3_MemMap — Architecture Document
 
-Dit document beschrijft de volledige architectuur van de **SharedValueV3 Memory-Mapped Engine**: een ultra-snelle, cross-process communicatielaag die Windows Memory-Mapped Files combineert met Google FlatBuffers voor nanoseconde-latency data-uitwisseling tussen C++ en C# applicaties.
+This document details the complete architecture spanning the **SharedValueV3 Memory-Mapped Engine**: an ultra-high speed, cross-process communication layer blending Windows Memory-Mapped Files intertwined with Google FlatBuffers driving nanosecond-latency data exchanges flanking C++ and C# applications.
 
 ---
 
-## Inhoudsopgave
+## Table of Contents
 
-1. [Motivatie & Architectuurkeuze](#1-motivatie--architectuurkeuze)
-2. [Systeemoverzicht](#2-systeemoverzicht)
-3. [Projectstructuur](#3-projectstructuur)
-4. [Kerncomponenten](#4-kerncomponenten)
+1. [Motivation & Architectural Choice](#1-motivation--architectural-choice)
+2. [System Overview](#2-system-overview)
+3. [Project Structure](#3-project-structure)
+4. [Core Components](#4-core-components)
    - [Memory-Mapped Files (MMF)](#41-memory-mapped-files-mmf)
    - [Named Mutex (Cross-Process Locking)](#42-named-mutex-cross-process-locking)
    - [Named Event (Zero-CPU Callbacks)](#43-named-event-zero-cpu-callbacks)
-   - [Google FlatBuffers (Serialisatie)](#44-google-flatbuffers-serialisatie)
-5. [Data Layout in Shared Memory](#5-data-layout-in-shared-memory)
-6. [Schema-Architectuur (FlatBuffers)](#6-schema-architectuur-flatbuffers)
-7. [Producer-Consumer Levenscyclus](#7-producer-consumer-levenscyclus)
-8. [Synchronisatiemodel](#8-synchronisatiemodel)
-9. [Exception Handling Architectuur](#9-exception-handling-architectuur)
+   - [Google FlatBuffers (Serialization)](#44-google-flatbuffers-serialization)
+5. [Data Layout spanning Shared Memory](#5-data-layout-spanning-shared-memory)
+6. [Schema Architecture (FlatBuffers)](#6-schema-architecture-flatbuffers)
+7. [Producer-Consumer Lifecycle](#7-producer-consumer-lifecycle)
+8. [Synchronization Model](#8-synchronization-model)
+9. [Exception Handling Architecture](#9-exception-handling-architecture)
 10. [Build Pipeline & Tooling](#10-build-pipeline--tooling)
-11. [Vergelijking met SharedValueV2 (COM)](#11-vergelijking-met-sharedvaluev2-com)
+11. [Comparisons against SharedValueV2 (COM)](#11-comparisons-against-sharedvaluev2-com)
 
 ---
 
-## 1. Motivatie & Architectuurkeuze
+## 1. Motivation & Architectural Choice
 
-De vorige generatie (`SharedValueV2`) draait op een Out-of-Process COM Server (`LocalServer32`). Elke property-aanroep vanuit C# veroorzaakt een RPC-marshaling over Named Pipes, wat context-switches en kernel-transitions afdwingt. Voor bulk data-access (duizenden rijen per seconde) is dit een knelpunt.
+The predecessor generation (`SharedValueV2`) cycles utilizing an Out-of-Process COM Server (`LocalServer32`). Any isolated property-call triggered passing through C# inflicts RPC-marshaling utilizing Named Pipes, simultaneously inducing stiff context-switches beside sharp kernel-transitions. Regarding bulk data ingestion (thousands arrays every sequence) this manifests generating intense bottlenecks.
 
-SharedValueV3 elimineert deze overhead door **direct geheugen te delen** tussen processen via het Windows-kernelmechanisme voor Memory-Mapped Files.
+SharedValueV3 permanently eradicates overhead instances actively **injecting directly shared memory partitions** looping parallel processes anchoring onto Windows kernel Memory-Mapped File mechanisms.
 
 ```mermaid
 flowchart LR
@@ -45,21 +45,21 @@ flowchart LR
     style E fill:#2d6a4f,stroke:#1b4332,color:#fff
 ```
 
-**Kernvoordelen:**
+**Core Advantages:**
 
-| Eigenschap | V2 (COM) | V3 (MemMap) |
+| Property | V2 (COM) | V3 (MemMap) |
 |---|---|---|
-| Latency per read | ~1-10 μs (RPC) | ~10-100 ns (pointer) |
-| Serialisatie | VARIANT/BSTR marshaling | FlatBuffers zero-copy |
-| CPU bij idle | Polling of COM Events | 0% (kernel wait) |
-| Dynamische data | `std::vector`, `BSTR` | FlatBuffer tables |
-| Cross-language | COM IDL/TLB | Shared `.fbs` schema |
+| Latency per read | ~1-10 μs (RPC) | ~10-100 ns (pointer hop) |
+| Serialization | VARIANT/BSTR marshaling | FlatBuffers zero-copy |
+| CPU at idle | Polling mimicking COM Events | 0% (kernel wait locks) |
+| Dynamic structures | `std::vector`, `BSTR` | FlatBuffer tables |
+| Cross-language barrier | COM IDL/TLB blueprints | Shared `.fbs` schema |
 
 ---
 
-## 2. Systeemoverzicht
+## 2. System Overview
 
-Het volledige systeem bestaat uit drie synchronisatieprimitieven die via de Windows-kernel gedeeld worden, en de FlatBuffers-laag die de data structureert.
+The entire framework encapsulates three tightly governed synchronization primitives communicating via the overarching Windows-kernel, alongside the layered FlatBuffers tier orchestrating structural logic.
 
 ```mermaid
 graph TB
@@ -103,32 +103,32 @@ graph TB
 
 ---
 
-## 3. Projectstructuur
+## 3. Project Structure
 
 ```mermaid
 graph TD
     ROOT["SharedValueV3_MemMap/"]
 
     ROOT --> SCHEMA["schema/"]
-    SCHEMA --> FBS["dataset.fbs<br/><i>FlatBuffers schema definitie</i>"]
+    SCHEMA --> FBS["dataset.fbs<br/><i>FlatBuffers schema blueprint</i>"]
 
     ROOT --> CPP["cpp_core/"]
-    CPP --> ENGINE_HPP["SharedValueEngine.hpp<br/><i>MMF + Mutex + Event wrapper</i>"]
-    CPP --> EXCEPT_HPP["SharedValueException.hpp<br/><i>Exception hiërarchie</i>"]
-    CPP --> MAIN_CPP["main.cpp<br/><i>Producer demo applicatie</i>"]
-    CPP --> GENERATED_H["dataset_generated.h<br/><i>FlatBuffers C++ header</i>"]
-    CPP --> CMAKE["CMakeLists.txt<br/><i>Build configuratie</i>"]
+    CPP --> ENGINE_HPP["SharedValueEngine.hpp<br/><i>MMF + Mutex + Event wrapping</i>"]
+    CPP --> EXCEPT_HPP["SharedValueException.hpp<br/><i>Exception hierarchy scaffolding</i>"]
+    CPP --> MAIN_CPP["main.cpp<br/><i>Producer demonstration app</i>"]
+    CPP --> GENERATED_H["dataset_generated.h<br/><i>FlatBuffers C++ logic</i>"]
+    CPP --> CMAKE["CMakeLists.txt<br/><i>Build mapping constraints</i>"]
 
     ROOT --> CS["csharp_core/"]
-    CS --> ENGINE_CS["SharedValueEngine.cs<br/><i>MMF + Mutex + Event wrapper</i>"]
-    CS --> EXCEPT_CS["SharedValueEngineExceptions.cs<br/><i>Exception hiërarchie</i>"]
-    CS --> PROG_CS["Program.cs<br/><i>Consumer demo applicatie</i>"]
-    CS --> GEN_CS["Generated/<br/><i>FlatBuffers C# klassen</i>"]
+    CS --> ENGINE_CS["SharedValueEngine.cs<br/><i>MMF + Mutex + Event wrapping</i>"]
+    CS --> EXCEPT_CS["SharedValueEngineExceptions.cs<br/><i>Exception hierarchy scaffolding</i>"]
+    CS --> PROG_CS["Program.cs<br/><i>Consumer demonstration app</i>"]
+    CS --> GEN_CS["Generated/<br/><i>FlatBuffers C# classes</i>"]
     CS --> CSPROJ["csharp_core.csproj"]
 
-    ROOT --> BUILD_PS1["build_schema.ps1<br/><i>Automatisch flatc download + codegen</i>"]
-    ROOT --> README["README.md"]
-    ROOT --> ARCH["ARCHITECTURE.md"]
+    ROOT --> BUILD_PS1["build_schema.ps1<br/><i>Autonomous flatc logic driving codegen</i>"]
+    ROOT --> README["README_EN.md"]
+    ROOT --> ARCH["ARCHITECTURE_EN.md"]
 
     style ROOT fill:#264653,stroke:#2a9d8f,color:#e9c46a
     style SCHEMA fill:#e76f51,stroke:#f4a261,color:#fff
@@ -136,34 +136,34 @@ graph TD
     style CS fill:#e9c46a,stroke:#f4a261,color:#264653
 ```
 
-### Bestandsoverzicht
+### Files Breakdown
 
-| Bestand | Taal | Rol |
+| File | Language | Design Role |
 |---|---|---|
-| `schema/dataset.fbs` | FlatBuffers IDL | Definieert de datastructuur (tables, nesting) |
-| `cpp_core/SharedValueEngine.hpp` | C++20 | Creëert en beheert MMF, Mutex, Event; schrijft data |
-| `cpp_core/SharedValueException.hpp` | C++20 | Hiërarchische exception klassen |
-| `cpp_core/main.cpp` | C++20 | Producer die periodiek datasets publiceert |
-| `cpp_core/dataset_generated.h` | C++ (gegenereerd) | FlatBuffers serialisatie-helpers |
-| `csharp_core/SharedValueEngine.cs` | C# (.NET 9) | Opent bestaande MMF, Mutex, Event; leest data |
-| `csharp_core/SharedValueEngineExceptions.cs` | C# (.NET 9) | Managed exception hiërarchie |
-| `csharp_core/Program.cs` | C# (.NET 9) | Consumer die via callbacks data ontvangt |
-| `csharp_core/Generated/*.cs` | C# (gegenereerd) | FlatBuffers deserialisatie-klassen |
-| `build_schema.ps1` | PowerShell | Download `flatc.exe` en regenereert code |
-| `cpp_core/CMakeLists.txt` | CMake | C++ build met FetchContent voor FlatBuffers |
+| `schema/dataset.fbs` | FlatBuffers IDL | Defines foundational core shapes (tables, nesting mappings) |
+| `cpp_core/SharedValueEngine.hpp` | C++20 | Scaffolds logic initializing MMF, Mutex, Event; pushes bytes |
+| `cpp_core/SharedValueException.hpp` | C++20 | Hierarchical exception tracking layers |
+| `cpp_core/main.cpp` | C++20 | Producer application publishing periodic clusters |
+| `cpp_core/dataset_generated.h` | C++ (generated) | FlatBuffers serialization conversion logic |
+| `csharp_core/SharedValueEngine.cs` | C# (.NET 9) | Re-links existing MMF, Mutex, Event layers; reads bytes |
+| `csharp_core/SharedValueEngineExceptions.cs` | C# (.NET 9) | Shielded managed exception parameters |
+| `csharp_core/Program.cs` | C# (.NET 9) | Consumer routing application ingesting updates heavily looping callbacks |
+| `csharp_core/Generated/*.cs` | C# (generated) | FlatBuffers deserialization nodes |
+| `build_schema.ps1` | PowerShell | Retrieves `flatc.exe` triggering code injections |
+| `cpp_core/CMakeLists.txt` | CMake | C++ compile parameters enforcing FetchContent integrating FlatBuffers |
 
 ---
 
-## 4. Kerncomponenten
+## 4. Core Components
 
 ### 4.1 Memory-Mapped Files (MMF)
 
-Een Memory-Mapped File is een Windows-kernelmechanisme waarmee een blok fysiek geheugen (vanuit de paging file) zichtbaar wordt gemaakt in de virtuele adresruimte van meerdere processen tegelijk. Het is geen bestand op disk — het leeft puur in RAM en wordt beheerd door de kernel.
+A Memory-Mapped File acts representing a core Windows-kernel integration technique illuminating an actual block tracing physical memory (deriving spanning paging environments) rendering entirely visible stretching spanning dual virtual-address footprints covering overarching operations parallel. This implies nothing caches onto hard disks — it resides utterly confined occupying RAM whilst directed firmly by the kernel.
 
 ```mermaid
 flowchart TB
     subgraph "Windows Kernel"
-        PF["Paging File<br/>(Fysiek geheugen)"]
+        PF["Paging File<br/>(Physical memory)"]
         KO["Kernel Object<br/><code>Global\..._Map</code>"]
         PF <--> KO
     end
@@ -188,18 +188,18 @@ flowchart TB
     style VIEW2 fill:#40916c,stroke:#2d6a4f,color:#fff
 ```
 
-**Essentiële API-aanroepen:**
+**Essential API calls:**
 
-| Zijde | Functie | Doel |
+| Domain Constraint | Executed Function | Technical Aim |
 |---|---|---|
-| C++ (Producer) | `CreateFileMappingW(INVALID_HANDLE_VALUE, ...)` | Creëert het kernel object (10 MB) |
-| C++ (Producer) | `MapViewOfFile(FILE_MAP_ALL_ACCESS)` | Krijgt een raw pointer (`void*`) naar het geheugen |
-| C# (Consumer) | `MemoryMappedFile.OpenExisting(...)` | Opent het bestaande kernel object by name |
-| C# (Consumer) | `mmf.CreateViewAccessor(0, maxSize)` | Krijgt een `MemoryMappedViewAccessor` voor gemanaged lezen |
+| C++ (Producer mechanism) | `CreateFileMappingW(INVALID_HANDLE_VALUE, ...)` | Instantiates kernel component block (10 MB allocated) |
+| C++ (Producer mechanism) | `MapViewOfFile(FILE_MAP_ALL_ACCESS)` | Snatches raw address pointer (`void*`) probing target space |
+| C# (Consumer mechanism) | `MemoryMappedFile.OpenExisting(...)` | Extrapolates mapping aligning alongside an active tag node |
+| C# (Consumer mechanism) | `mmf.CreateViewAccessor(0, maxSize)` | Generates logical `MemoryMappedViewAccessor` covering managed pulls |
 
 ### 4.2 Named Mutex (Cross-Process Locking)
 
-Zonder synchronisatie zou de C# consumer half-geschreven data kunnen lezen terwijl de C++ producer nog bezig is. Een **Named Mutex** in de `Global\`-namespace is zichtbaar voor alle processen op het systeem en garandeert exclusieve toegang.
+Discounting flawless tight synchronization, jumping C# logic nodes might swallow fragments traversing raw byte flows exactly whereas the overlapping C++ module persistently writes inputs continuously. Securing a **Named Mutex** within the `Global\`-namespace renders an indicator perfectly transparent evaluating traversing completely segregated domains enforcing aggressive exclusivity rules.
 
 ```mermaid
 sequenceDiagram
@@ -208,67 +208,67 @@ sequenceDiagram
     participant C as C# Consumer
 
     P->>M: WaitForSingleObject() → LOCK
-    Note over P: memcpy() data naar MMF
+    Note over P: memcpy() stream feeding MMF
     P->>M: ReleaseMutex() → UNLOCK
     P->>P: SetEvent() → signal
 
     C->>M: _mutex.WaitOne(5000) → LOCK
-    Note over C: ReadArray() data uit MMF
+    Note over C: ReadArray() scooping MMF payloads
     C->>M: ReleaseMutex() → UNLOCK
-    Note over C: FlatBuffer parse + callback
+    Note over C: FlatBuffer parsing + delegate callback execution
 ```
 
-**Robuustheid bij crashes:** Als het producerproces crasht terwijl het de mutex vasthoudt, ontvangt de consumerthread een `WAIT_ABANDONED` (C++) of `AbandonedMutexException` (C#). In beide implementaties wordt dit expliciet opgevangen: de consumer verkrijgt eigendom van de mutex en logt een waarschuwing.
+**Rigidity concerning system failures:** Assuming producers buckle crashing completely retaining grips overlapping the mutex, consecutive consumer instances stumble trapping unique `WAIT_ABANDONED` (leveraging C++) equivalent mimicking `AbandonedMutexException` (targeting C#). Exploring mutual frameworks catches implementations explicitly: routing inherently snatches prevailing Mutex ownership while broadcasting logging flags.
 
 ### 4.3 Named Event (Zero-CPU Callbacks)
 
-Het Event-object fungeert als een interrupt-signaal: de consumerthread slaapt met **exact 0% CPU** totdat de producer `SetEvent()` aanroept.
+Targeting an Event object forces mimicking an isolated hardware interrupt channel: the core consumer thread drops entirely dormant registering **exactly 0% CPU consumption** pending producer interventions firing `SetEvent()`.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Waiting: StartListening()
 
-    Waiting --> Signaled: Producer calls SetEvent()
-    Signaled --> Reading: Mutex acquired
-    Reading --> Callback: FlatBuffer parsed
-    Callback --> Waiting: OnDataReady fired
+    Waiting --> Signaled: Producer signals SetEvent()
+    Signaled --> Reading: Mutex grip secured
+    Reading --> Callback: FlatBuffer perfectly parsed
+    Callback --> Waiting: OnDataReady cascades rapidly
 
     Waiting --> Stopped: StopListening()
     Stopped --> [*]
 
     note right of Waiting
-        Thread blocked by kernel.
-        0% CPU consumption.
-        WaitOne() / WaitForSingleObject()
+        Kernel definitively blocks operations completely.
+        0% CPU load remains intact.
+        Leveraging WaitOne() / WaitForSingleObject()
     end note
 
     note right of Callback
-        C# event delegate
-        invoked on listener thread
+        Native C# event sequence handling 
+        unleashed natively upon designated listener threading.
     end note
 ```
 
-**Auto-Reset gedrag:** Het event is geconfigureerd als **auto-reset** (`CreateEventW(..., FALSE, FALSE, ...)`). Dit betekent dat nadat één wachtende thread wakker wordt, het event automatisch terug naar non-signaled gaat — er is geen race condition mogelijk waarbij meerdere consumers hetzelfde event twee keer lezen.
+**Auto-Reset protocol implementation:** Events are solidly bound mirroring **auto-reset** behaviors (`CreateEventW(..., FALSE, FALSE, ...)`). Demonstrating exclusively a singular dormant thread awakening instantly snapping states mirroring an un-signaled designation definitively — exterminating any race conditions allowing sequential readouts duplicating loops unintentionally.
 
-### 4.4 Google FlatBuffers (Serialisatie)
+### 4.4 Google FlatBuffers (Serialization)
 
-FlatBuffers lost het fundamentele probleem op dat reguliere C++ datastructuren (`std::vector`, `std::string`, pointers) onbruikbaar zijn in shared memory. FlatBuffers serialiseert alles naar een **plat byte-array** dat zonder parsing direct doorgelezen kan worden.
+FlatBuffers intercepts navigating the foundational roadblock stating universal C++ shapes (`std::vector`, `std::string`, deep pointer mappings) essentially disintegrate spanning natively mapped blocks crossing borders. FlatBuffers resolves standardizing strictly toward a **flattened byte-array template** delivering continuous read flows directly sidestepping sluggish parsing engines.
 
 ```mermaid
 flowchart LR
     subgraph "C++ Producer"
         B["FlatBufferBuilder"]
-        B --> S["Serialize to<br/>uint8_t[] buffer"]
+        B --> S["Serialize routing towards<br/>uint8_t[] buffer block"]
     end
 
     subgraph "Shared Memory (MMF)"
-        MEM["[size_t len][flatbuffer bytes...]"]
+        MEM["[size_t length mapping][flatbuffer logical bytes...]"]
     end
 
     subgraph "C# Consumer"
-        BB["ByteBuffer(rawData)"]
+        BB["ByteBuffer(rawData wrapper)"]
         BB --> ROOT["GetRootAsSharedDataset()"]
-        ROOT --> FIELD["Zero-copy field access<br/>.ApiVersion, .Rows(i)"]
+        ROOT --> FIELD["Zero-copy localized field sweeps<br/>.ApiVersion, .Rows(i)"]
     end
 
     S -->|"memcpy"| MEM
@@ -277,59 +277,59 @@ flowchart LR
     style MEM fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
 ```
 
-**Waarom geen Protocol Buffers of JSON?**
+**Discounting Protocol Buffers alongside JSON alternatives?**
 
-| Criterium | FlatBuffers | Protocol Buffers | JSON |
+| Requirement Criterion | FlatBuffers | Protocol Buffers | JSON Variants |
 |---|---|---|---|
-| Zero-copy access | ✅ Ja | ❌ Nee (decode vereist) | ❌ Nee |
-| Shared memory compatible | ✅ Plat byte-array | ⚠️ Na decode, heap allocatie | ❌ String parsing |
-| Schema evolutie | ✅ Forward/backward | ✅ Forward/backward | ❌ Fragiel |
-| Codegen C++ + C# | ✅ Ja | ✅ Ja | ❌ Handmatig |
+| Zero-copy mapping loops | ✅ Achieved perfectly | ❌ Denied (demands decode layers) | ❌ Denied entirely |
+| Shared memory conformity | ✅ Shallow flattened arrays | ⚠️ Decode enforces heap jumping | ❌ Sluggish string processing hooks |
+| Evolutionary schema tweaks | ✅ Flawless forward/backward | ✅ Flawless forward/backward | ❌ Highly fragile operations |
+| Codegen merging C++ + C# | ✅ Embedded inherently | ✅ Embedded inherently | ❌ Hand-crafted mechanics |
 
 ---
 
-## 5. Data Layout in Shared Memory
+## 5. Data Layout spanning Shared Memory
 
-Het geheugenblok van 10 MB heeft een eenvoudige binaire layout:
+The 10 MB contiguous memory cluster utilizes extraordinarily austere binary alignments:
 
 ```mermaid
 block-beta
     columns 4
-    A["Bytes 0-7<br/><b>size_t</b><br/>Payload lengte"]:1
-    B["Bytes 8 .. 8+N<br/><b>uint8_t[]</b><br/>FlatBuffer payload"]:2
-    C["Ongebruikt<br/>(tot 10 MB)"]:1
+    A["Bytes 0-7<br/><b>size_t</b><br/>Payload chunk size"]:1
+    B["Bytes 8 .. 8+N<br/><b>uint8_t[]</b><br/>FlatBuffer operational bytes"]:2
+    C["Vacant allocations<br/>(stretching up to 10 MB)"]:1
 
     style A fill:#e76f51,stroke:#f4a261,color:#fff
     style B fill:#2a9d8f,stroke:#264653,color:#fff
     style C fill:#6c757d,stroke:#495057,color:#dee2e6
 ```
 
-| Offset | Type | Beschrijving |
+| Memory Offset Segment | Variable Format | Implementation Mapping |
 |---|---|---|
-| `0x00` – `0x07` | `size_t` (8 bytes, x64) | Grootte van de FlatBuffer payload in bytes |
-| `0x08` – `0x08 + N` | `uint8_t[N]` | De ruwe FlatBuffer binary (root: `SharedDataset`) |
-| `0x08 + N` – einde | — | Ongebruikte ruimte (beschikbaar voor groei) |
+| `0x00` – `0x07` | `size_t` (covering 8 bytes stretching x64) | Dimensions defining raw FlatBuffer byte layouts |
+| `0x08` – `0x08 + N` | `uint8_t[N]` | Raw untouched binary FlatBuffer structures (origin: `SharedDataset`) |
+| `0x08 + N` – stretching towards bounds | — | Stagnant padding buffering expanded growth iterations |
 
-**C++ schrijft:**
+**C++ injection routine:**
 ```cpp
 size_t* pSize = static_cast<size_t*>(m_pBuf);
-*pSize = size;                                    // lengte op offset 0
+*pSize = size;                                    // embeds dimension metrics traversing offset 0
 uint8_t* pDest = static_cast<uint8_t*>(m_pBuf) + sizeof(size_t);
-memcpy(pDest, data, size);                        // payload op offset 8
+memcpy(pDest, data, size);                        // embeds operational payload traversing offset 8
 ```
 
-**C# leest:**
+**C# probing routine:**
 ```csharp
-ulong dataSize = _accessor.ReadUInt64(0);         // lengte van offset 0
+ulong dataSize = _accessor.ReadUInt64(0);         // scoops dimensional logic sweeping offset 0
 byte[] rawData = new byte[dataSize];
-_accessor.ReadArray(8, rawData, 0, (int)dataSize); // payload van offset 8
+_accessor.ReadArray(8, rawData, 0, (int)dataSize); // scoops operational payload sweeping offset 8
 ```
 
 ---
 
-## 6. Schema-Architectuur (FlatBuffers)
+## 6. Schema Architecture (FlatBuffers)
 
-Het FlatBuffers-schema (`dataset.fbs`) definieert een drietal geneste tables:
+Core layout schemas (`dataset.fbs`) isolate mapping arrays driving three independent deeply nesting configurations:
 
 ```mermaid
 erDiagram
@@ -353,36 +353,36 @@ erDiagram
     }
 ```
 
-### Schema Evolutie
+### Navigating Schema Evolutionary Hooks
 
-FlatBuffers laat velden toe aan het einde van een table zonder bestaande data te breken. Dit maakt forward- en backward-compatibele schema-wijzigingen mogelijk:
+FlatBuffers inherently advocates tacking attributes flanking extreme array bounds leaving static structural frameworks functionally undisturbed. Thus manifesting rigorous forward ensuring overlapping backward-compatible iteration safety protocols:
 
 ```mermaid
 flowchart TD
-    V1["Schema v1<br/>temperature, humidity, status_code"]
-    V2["Schema v2<br/>+ pressure (nieuw veld)"]
-    V3["Schema v3<br/>+ location (nieuw veld)"]
+    V1["Schema iteration v1<br/>temperature, humidity, status_code"]
+    V2["Schema iteration v2<br/>+ pressure (added node)"]
+    V3["Schema iteration v3<br/>+ location (added node)"]
 
     V1 --> V2
     V2 --> V3
 
-    OLD_P["Oude Producer (v1)"] -->|"Schrijft v1 data"| NEW_C["Nieuwe Consumer (v3)"]
-    NEW_P["Nieuwe Producer (v3)"] -->|"Schrijft v3 data"| OLD_C["Oude Consumer (v1)"]
+    OLD_P["Vintage Producer (v1)"] -->|"Casts v1 payload structures"| NEW_C["Modern Consumer (v3)"]
+    NEW_P["Modern Producer (v3)"] -->|"Casts v3 payload structures"| OLD_C["Vintage Consumer (v1)"]
 
-    NEW_C -->|"pressure = default(0)"| OK1["✅ Werkt"]
-    OLD_C -->|"Negeert onbekende velden"| OK2["✅ Werkt"]
+    NEW_C -->|"pressure forces heavily default(0)"| OK1["✅ Evaluates accurately"]
+    OLD_C -->|"Silently dismisses disjointed unseen nodes"| OK2["✅ Evaluates accurately"]
 
     style OK1 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
     style OK2 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
 ```
 
-> **Regel:** Verwijder nooit bestaande velden en hergebruik nooit veld-ID's. Voeg alleen velden toe aan het einde.
+> **Mandatory Doctrine:** Stripping established variables alongside re-allocating active Field-ID designations proves categorically forbidden. Append additions exclusively mapping external array extremities.
 
 ---
 
-## 7. Producer-Consumer Levenscyclus
+## 7. Producer-Consumer Lifecycle
 
-De complete opstartsequentie en dataflow van begin tot eind:
+Extrapolating comprehensive sequences launching parallel streams evaluating dataflow routing entirely transparently:
 
 ```mermaid
 sequenceDiagram
@@ -392,174 +392,173 @@ sequenceDiagram
     participant K as Windows Kernel<br/>(MMF + Mutex + Event)
     participant C as C# Consumer<br/>(Program.cs)
 
-    Note over P: Proces start
+    Note over P: Start routine initiates natively
     P->>K: CreateMutexW("Global\..._Mutex")
     P->>K: CreateEventW("Global\..._Event")
     P->>K: CreateFileMappingW("Global\..._Map", 10MB)
-    P->>K: MapViewOfFile() → void* m_pBuf
-    Note over P: Engine ready ✅
+    P->>K: MapViewOfFile() → void* m_pBuf pointer hop
+    Note over P: Underlying engine engages successfully ✅
 
-    loop Elke 2 seconden
-        P->>P: FlatBufferBuilder.Finish(dataset)
+    loop Firing intervals matching 2 seconds
+        P->>P: FlatBufferBuilder.Finish(dataset) operation
         P->>K: WaitForSingleObject(mutex) → LOCK
-        P->>K: memcpy(buf, flatbuffer, size)
+        P->>K: memcpy(buf, flatbuffer, sizing metrics)
         P->>K: ReleaseMutex() → UNLOCK
         P->>K: SetEvent() → SIGNAL
     end
 
-    Note over C: Proces start (later)
-    C->>K: MemoryMappedFile.OpenExisting()
-    Note over C: ❌ Faalt als producer nog niet draait
-    C->>C: Thread.Sleep(1000) → retry
+    Note over C: Consumer process trails (spinning up delayed sequence)
+    C->>K: MemoryMappedFile.OpenExisting() evaluates probing
+    Note over C: ❌ Crashes strictly assuming producers remain idle
+    C->>C: Thread.Sleep(1000) → retry looping evaluates
 
-    C->>K: MemoryMappedFile.OpenExisting() ✅
-    C->>K: Mutex.OpenExisting() ✅
-    C->>K: EventWaitHandle.OpenExisting() ✅
-    Note over C: Engine connected ✅
+    C->>K: MemoryMappedFile.OpenExisting() engages ✅
+    C->>K: Mutex.OpenExisting() engages ✅
+    C->>K: EventWaitHandle.OpenExisting() engages ✅
+    Note over C: Core engine linkage bridges securely ✅
 
-    C->>C: StartListening()
-    Note over C: Background thread start
+    C->>C: StartListening() fires processing loop
+    Note over C: Background threaded sequence drops active
 
-    loop Wacht op events
-        C->>K: EventWaitHandle.WaitOne() — SLAAPT (0% CPU)
-        K-->>C: Event gesignaleerd!
+    loop Trapping periodic events continuously
+        C->>K: EventWaitHandle.WaitOne() — BLOCKING (0% CPU)
+        K-->>C: Logic flips event signaling parameters!
         C->>K: _mutex.WaitOne(5000) → LOCK
-        C->>K: ReadUInt64(0) → dataSize
-        C->>K: ReadArray(8, rawData) → FlatBuffer bytes
+        C->>K: ReadUInt64(0) → dataSize mapping
+        C->>K: ReadArray(8, rawData mapping) → Binary bytes routing
         C->>K: ReleaseMutex() → UNLOCK
-        C->>C: GetRootAsSharedDataset(ByteBuffer)
-        C->>C: OnDataReady?.Invoke(dataset)
-        Note over C: Gebruikerscode ontvangt callback
+        C->>C: GetRootAsSharedDataset(ByteBuffer overlay)
+        C->>C: OnDataReady?.Invoke(dataset variable)
+        Note over C: External code logic intercepts operational callbacks smoothly
     end
 ```
 
-### Retry-Mechanisme bij Opstarten
+### Resilience Protocols Surrounding Startup Logic
 
-De C# consumer kan eerder starten dan de C++ producer. Het retry-patroon vangt dit op:
+The C# endpoint invariably manifests jumping cycles bypassing C++ processes occasionally. Catching desynchronizations demands solid retry loop scaffolding natively:
 
 ```mermaid
 flowchart TD
-    START["Consumer start"] --> TRY["new SharedValueEngine()"]
-    TRY -->|"EngineInitializationException"| SLEEP["Thread.Sleep(1000)"]
+    START["Consumer fires up sequence"] --> TRY["new SharedValueEngine() executes inherently"]
+    TRY -->|"EngineInitializationException triggers sharply"| SLEEP["Thread.Sleep(1000) loop buffer"]
     SLEEP --> TRY
-    TRY -->|"Succes"| CONNECTED["Engine connected ✅"]
-    CONNECTED --> LISTEN["StartListening()"]
-    LISTEN --> LOOP["ListenLoop (background thread)"]
+    TRY -->|"Connections clear successfully"| CONNECTED["Engine connects dependably ✅"]
+    CONNECTED --> LISTEN["StartListening() subroutine"]
+    LISTEN --> LOOP["ListenLoop (dormant background threading arrays)"]
 
     style CONNECTED fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
     style LOOP fill:#023e8a,stroke:#03045e,color:#caf0f8
 ```
 
-### Kernel Object Levenscyclus en Reference Counting
+### Kernel Object Lifecycle and Reference Counting Models
 
-Windows kernel objects (MMF, Mutex, Event) werken op basis van **reference counting**. Elk proces dat een handle opent verhoogt de interne teller. Zodra alle handles gesloten zijn (refcount → 0), vernietigt Windows het object. Dit heeft drie belangrijke implicaties:
+Windows structural components (originating MMF, Mutex, Event instances) operate solely propelled exploiting **reference-counting** arithmetic natively. Spanning external frameworks allocating bindings naturally spikes numeric increments accordingly cross-checking operations. Zeroing variables actively prompts unceremonious Windows garbage disposal sweeps instantly collapsing objects internally. Analyzing profound implications uncovers three overarching logical consequences:
 
-#### Normaal gebruik: Producer draait oneindig, consumers komen en gaan
+#### Optimal baseline routine: Producer sustains infinite bounds, consumers transition dynamically
 
-Dit is het primaire use-case scenario en werkt probleemloos:
-
-```mermaid
-sequenceDiagram
-    participant P as C++ Producer
-    participant K as Kernel Objects<br/>(refcount)
-    participant CA as C# Consumer A
-    participant CB as C# Consumer B
-
-    P->>K: CreateFileMappingW → refcount = 1
-    Note over K: Objects bestaan ✅
-
-    CA->>K: OpenExisting → refcount = 2
-    Note over CA: Leest data via callbacks
-
-    CA->>K: Dispose() → refcount = 1
-    Note over K: Objecten blijven bestaan ✅<br/>Producer heeft nog handles
-
-    CB->>K: OpenExisting → refcount = 2
-    Note over CB: Nieuwe consumer, geen probleem
-
-    CB->>K: Dispose() → refcount = 1
-    Note over K: Objecten blijven bestaan ✅
-
-    Note over P: Producer draait voor altijd...
-```
-
-**Eigenschappen van dit model:**
-- ✅ Producer draait oneindig lang ongeacht of er consumers zijn
-- ✅ Consumers kunnen op elk moment verbinden en weer loskoppelen
-- ✅ Meerdere consumers tegelijk is mogelijk (ieder opent eigen handle)
-- ✅ De producer merkt niets van consumers (fire-and-forget)
-- ✅ Consumer die eerder start dan de producer wacht via retry-loop
-
-#### Problematisch scenario: Producer stopt terwijl er geen consumers zijn
+Serving mimicking central use-cases guarantees operational perfection flawlessly:
 
 ```mermaid
 sequenceDiagram
     participant P as C++ Producer
-    participant K as Kernel Objects<br/>(refcount)
-    participant C as C# Consumer
+    participant K as Kernel Variables<br/>(tracking refcounts logic)
+    participant CA as C# Consumer Node A
+    participant CB as C# Consumer Node B
 
-    P->>K: CreateFileMappingW → refcount = 1
-    P->>K: WriteData() x3
-    P->>K: ~SharedValueEngine() → refcount = 0
-    Note over K: ⚠️ OBJECTS VERNIETIGD<br/>Geen handles meer open
+    P->>K: Fires Native CreateFileMappingW → driving refcount = 1
+    Note over K: Kernel objects anchor dynamically ✅
 
-    C->>K: OpenExisting()
-    Note over C: ❌ FileNotFoundException<br/>Object bestaat niet meer
+    CA->>K: Fires OpenExisting hooks → pushing refcount = 2
+    Note over CA: Inhales incoming flows traversing callbacks
+
+    CA->>K: Dispose() terminates → tumbling refcount = 1
+    Note over K: Active arrays remain tethered securely ✅<br/>Producers grip primary nodes effectively
+
+    CB->>K: Fires OpenExisting → leaping refcount = 2
+    Note over CB: Unrelated client connects, zero logic friction observed
+
+    CB->>K: Dispose() triggers → crashing refcount = 1
+    Note over K: Kernel structures perfectly preserved ✅
+
+    Note over P: Core Producer routine functions continuously driving indefinitely...
 ```
 
-Dit scenario treedt **alleen** op bij geautomatiseerde tests waar de producer een beperkt aantal updates stuurt (`--count N`) en dan afsluit. Bij normaal gebruik (producer draait oneindig) is dit geen probleem.
+**Attribute definitions aligning this structure:**
+- ✅ Producer routinely cycles completely ignoring peripheral consumer mapping counts natively
+- ✅ Consumer components connect interchangeably executing un-tethered tracking bounds dynamically
+- ✅ Substantial overlapping multi-consumer networks bridge securely parallel mapping unique local handlers cleanly
+- ✅ Producer functions fully disconnected executing pure fire-and-forget logic loops
+- ✅ Startup discrepancies isolating consumer pacing loops stall effortlessly firing continuous retry jumps smoothly
 
-#### Oplossing voor tests: `--linger` parameter
-
-De producer ondersteunt een `--linger MS` parameter die hem na de laatste write nog N milliseconden in leven houdt. Dit geeft de consumer tijd om te verbinden en het laatste event te ontvangen:
+#### Severe edge-case bottleneck: Producer process disintegrates stripping consumer nodes
 
 ```mermaid
 sequenceDiagram
     participant P as C++ Producer
-    participant K as Kernel Objects
-    participant C as C# Consumer
+    participant K as Kernel Variable Pools<br/>(tracking refcount routing)
+    participant C as C# Consumer Base
 
-    P->>K: Create → refcount = 1
-    P->>K: WriteData() x3
-    Note over P: --linger 8000<br/>Wacht 8 seconden...
-    C->>K: OpenExisting → refcount = 2
-    C->>K: WaitOne() → Event #3
-    Note over C: Data ontvangen ✅
-    P->>K: Exit → refcount = 1
-    Note over K: Objecten blijven bestaan ✅
+    P->>K: Creates variables via CreateFileMappingW → pushing refcount = 1
+    P->>K: Scopes WriteData() x3 clusters
+    P->>K: Forces ~SharedValueEngine() terminating → dumping refcount = 0
+    Note over K: ⚠️ KERNEL OBJECTS ANNIHILATED<br/>Zero anchors maintain variables concurrently
+
+    C->>K: Attempts OpenExisting() mapping
+    Note over C: ❌ Throws FileNotFoundException<br/>Core node allocations violently dissolved
 ```
 
-> **Samenvatting:** De `--linger` parameter is uitsluitend een testing utility. Bij productiegebruik draait de producer oneindig en is er geen linger nodig.
+Such permutations materialize **purely** confined covering rigidly formulated automated test sweeps whereas producers dump explicitly restrictive updates (mapping `--count N` flags) abandoning processes drastically afterwards. Normal environments (maintaining infinite cycling models) disregard anomalies.
+
+#### Resolving test instability loops: implementing the `--linger` parameter tag
+
+The embedded producer routine catches modifiers driving an explicit `--linger MS` argument halting shutdown mechanisms forcibly keeping node connections pulsing pushing N milliseconds overlapping concluding write actions. Providing buffer spans covering consumer initialization logic loops trapping final outstanding bursts flawlessly:
+
+```mermaid
+sequenceDiagram
+    participant P as C++ Producer
+    participant K as Native Kernel Core
+    participant C as Active C# Consumer
+
+    P->>K: Initial Creation → mapping refcount = 1
+    P->>K: Scopes WriteData() x3 intervals
+    Note over P: Parses --linger 8000 metric<br/>Delays 8 sec terminating sweeps...
+    C->>K: Evaluates OpenExisting → spiking refcount = 2
+    C->>K: Snatches Event WaitOne() logic → Trapping sequence #3 natively
+    Note over C: Data captured accurately ✅
+    P->>K: Routine exit trigger → shedding refcount = 1
+    Note over K: Remaining objects persist accurately avoiding destruction ✅
+```
+
+> **Condensed observation:** Mapping explicit `--linger` extensions operates serving completely secluded testing diagnostic tools exclusively. Deployments encompassing production-level frameworks cycle producers indefinitely disregarding linger metrics completely safely.
 
 ---
 
+## 8. Synchronization Model
 
-## 8. Synchronisatiemodel
-
-Alle drie kernel-objecten werken samen om data-integriteit en efficiënte notificatie te garanderen:
+Spanning three distinct kernel nodes effectively guarantees data-conformity intertwined leveraging aggressively optimal firing sequences:
 
 ```mermaid
 flowchart TD
-    subgraph "Write Path (C++ Producer)"
-        W1["WaitForSingleObject(mutex)"]
-        W2["memcpy → Shared Memory"]
-        W3["ReleaseMutex()"]
-        W4["SetEvent()"]
+    subgraph "Write Operations Routine (C++ Producer loop)"
+        W1["WaitForSingleObject(locking mutex stringently)"]
+        W2["memcpy → Mapping Shared Memory buffers securely"]
+        W3["ReleaseMutex() disengaging grips"]
+        W4["SetEvent() launching notifications"]
         W1 --> W2 --> W3 --> W4
     end
 
-    subgraph "Read Path (C# Consumer)"
-        R0["WaitOne(event) — blocked"]
-        R1["WaitOne(mutex, 5000)"]
-        R2["ReadArray ← Shared Memory"]
-        R3["ReleaseMutex()"]
-        R4["Parse FlatBuffer"]
-        R5["OnDataReady callback"]
+    subgraph "Reading Traversals (C# Consumer logic)"
+        R0["WaitOne(event signal) — drops blocked logic loops natively"]
+        R1["WaitOne(mutex parameter, 5000)"]
+        R2["ReadArray ← Scooping Shared Memory bytes"]
+        R3["ReleaseMutex() peeling grips"]
+        R4["Evaluate Parsing parsing FlatBuffers"]
+        R5["OnDataReady triggers asynchronous overarching callbacks"]
         R0 --> R1 --> R2 --> R3 --> R4 --> R5
-        R5 -->|"loop"| R0
+        R5 -->|"looping sequences"| R0
     end
 
-    W4 -.->|"kernel wakes thread"| R0
+    W4 -.->|"kernel rouses suspended threads perfectly"| R0
 
     style W1 fill:#7f4f24,stroke:#582f0e,color:#ffe8d6
     style W3 fill:#7f4f24,stroke:#582f0e,color:#ffe8d6
@@ -569,30 +568,30 @@ flowchart TD
     style R0 fill:#023e8a,stroke:#03045e,color:#caf0f8
 ```
 
-### Garanties
+### Safety Operational Assurances
 
-| Garantie | Mechanisme |
+| Guarantee Designation | Operational Engineering Mechanic |
 |---|---|
-| **Geen torn reads** | Mutex lockt de hele write → Mutex lockt de hele read |
-| **Geen busy-wait** | `WaitOne()` en `WaitForSingleObject()` blokkeren in de kernel |
-| **Geen dubbele lezing** | Auto-reset event keert automatisch terug naar non-signaled |
-| **Crash-bestendig** | Abandoned mutex wordt automatisch overgenomen door wachtende thread |
-| **Timeout-beveiliging** | 5 seconden timeout op mutex acquisitie voorkomt deadlocks |
+| **Eliminates torn read sequences** | Mutex rigidly sweeps spanning identical full stringing write loops → rigidly scoping reading arcs seamlessly |
+| **Bypasses spinning busy-wait checks** | `WaitOne()` adjoining `WaitForSingleObject()` definitively suspends threading loops relying fully utilizing kernel states |
+| **Avoids duplicate payload cycles** | Auto-reset properties inherently strip signal variables reverting silently targeting non-signaled logic bindings flawlessly |
+| **Deflects hard process crashes** | Abandoned mutex strings forcibly cascade transferring allocations sweeping perfectly rescuing stuck threads |
+| **Securing timeout loops efficiently** | Hard 5-second constraints sever hanging grips sweeping mutex parameters avoiding disastrous overlapping deadlocks cleanly |
 
 ---
 
-## 9. Exception Handling Architectuur
+## 9. Exception Handling Architecture
 
-Beide talen implementeren een parallelle exception-hiërarchie die alle faalscenario's van het systeem afdekt:
+Mapping parallel environments natively implements mirrored hierarchical structures shielding system-level anomalies bridging codebases completely:
 
 ```mermaid
 graph TD
-    subgraph "C++ Exception Hierarchy"
-        STD["std::runtime_error"]
-        SVE_CPP["SharedValueException"]
-        SYS["SystemException<br/><i>+ DWORD errorCode</i>"]
-        MTX_CPP["MutexException"]
-        MEM_CPP["MemoryMappedException"]
+    subgraph "C++ Structural Hierarchy Nodes"
+        STD["std::runtime_error base abstraction"]
+        SVE_CPP["SharedValueException logic module"]
+        SYS["SystemException module<br/><i>wrapping native + DWORD Error constraints</i>"]
+        MTX_CPP["MutexException logic block"]
+        MEM_CPP["MemoryMappedException constraint tracking"]
 
         STD --> SVE_CPP
         SVE_CPP --> SYS
@@ -600,12 +599,12 @@ graph TD
         SVE_CPP --> MEM_CPP
     end
 
-    subgraph "C# Exception Hierarchy"
-        DOTNET["System.Exception"]
-        SVE_CS["SharedValueException"]
-        INIT["EngineInitializationException<br/><i>+ component name</i>"]
-        TIMEOUT["EngineTimeoutException"]
-        CORRUPT["EngineCorruptedException"]
+    subgraph "C# Object Exception Branches"
+        DOTNET["System.Exception baseline reference"]
+        SVE_CS["SharedValueException logic bindings"]
+        INIT["EngineInitializationException error block<br/><i>stringing component tags inherently</i>"]
+        TIMEOUT["EngineTimeoutException timing flags"]
+        CORRUPT["EngineCorruptedException data safety catches"]
 
         DOTNET --> SVE_CS
         SVE_CS --> INIT
@@ -617,40 +616,40 @@ graph TD
     style SVE_CS fill:#e76f51,stroke:#f4a261,color:#fff
 ```
 
-### Faalscenario's en Afhandeling
+### Evaluating Breakdown Responses alongside Corrections
 
-| Scenario | C++ Exception | C# Exception |
+| Breakdown Trigger Scenario | C++ Embedded Component | C# Bounding Exceptions |
 |---|---|---|
-| Kernel object creatie faalt | `SystemException` (met `GetLastError()`) | `EngineInitializationException` (met component naam) |
-| Mutex timeout (5s) | `MutexException` | `EngineTimeoutException` |
-| Producer crasht (abandoned mutex) | `WAIT_ABANDONED` + warning log | `AbandonedMutexException` → catch + continue |
-| Data groter dan MMF capaciteit | `MemoryMappedException` | *Niet van toepassing (read-only)* |
-| Corrupte payload size | *Niet van toepassing (write-only)* | `EngineCorruptedException` |
-| Generieke WinAPI fout | `SystemException` (context + error code) | Wrapped in `EngineInitializationException` |
+| Kernel component scaffolding crumbles violently | `SystemException` (husk framing `GetLastError()`) | `EngineInitializationException` (mapping specific component names recursively) |
+| Mutex drops exceeding 5s timeouts | `MutexException` variables | `EngineTimeoutException` logic catches |
+| Producer crashes stripping connections (abandoning mutex loops) | `WAIT_ABANDONED` sequences + logging parameters | `AbandonedMutexException` → executes catch procedures properly continuing flows |
+| Payload stretches eclipsing overarching MMF limits severely | `MemoryMappedException` parameters | *Entirely isolated avoiding impacts inherently (read-only mechanics limit)* |
+| Corrupted metric mapping arrays rendering structurally invalid parameters | *Untethered logic instances (write-only barriers apply natively)* | `EngineCorruptedException` triggering safely |
+| Generative cascading WinAPI failure chains | `SystemException` (isolating precise failure + system bounds) | Scoped firmly utilizing `EngineInitializationException` components |
 
-### Mutex Safety in Exception Context
+### Validating Mutex Locking Stability Handling Exception Chains
 
-De C++ `WriteData()` methode garandeert dat de mutex altijd vrijgegeven wordt, zelfs bij onverwachte fouten:
+Deploying C++ `WriteData()` execution protocols guarantees mutex arrays securely disengage un-tethering natively disregarding aggressively anomalous loops inherently:
 
 ```mermaid
 flowchart TD
-    ACQ["WaitForSingleObject(mutex)"] --> TRY["try { memcpy + ReleaseMutex + SetEvent }"]
-    TRY -->|"succes"| DONE["✅ Klaar"]
-    TRY -->|"exception"| CATCH["catch (...) { ReleaseMutex(); throw; }"]
-    CATCH --> RETHROW["Exception wordt doorgegeven"]
+    ACQ["WaitForSingleObject(locking mutex constraints)"] --> TRY["try { memcpy arrays + ReleaseMutex cycles + SetEvent routines }"]
+    TRY -->|"success"| DONE["✅ Cleared execution correctly"]
+    TRY -->|"exception cascading"| CATCH["catch (...) { ReleaseMutex() forces unlock; throw upward; }"]
+    CATCH --> RETHROW["Exception safely bubbles upwards naturally"]
 
     style ACQ fill:#7f4f24,stroke:#582f0e,color:#ffe8d6
     style CATCH fill:#e76f51,stroke:#c9302c,color:#fff
 ```
 
-De C# `ReadCurrentData()` gebruikt een `try/finally` blok met dezelfde garantie:
+Deploying C# `ReadCurrentData()` relies safely harnessing sweeping `try/finally` clusters executing comparable resilience mapping identically:
 
 ```mermaid
 flowchart TD
-    ACQ2["_mutex.WaitOne(5000)"] --> TRY2["try { ReadArray + FlatBuffer parse }"]
-    TRY2 --> FINALLY["finally { if (acquired) ReleaseMutex() }"]
-    TRY2 -->|"exception"| FINALLY
-    FINALLY --> RETURN["Return of rethrow"]
+    ACQ2["_mutex.WaitOne(5000 timeouts explicitly)"] --> TRY2["try { Execution ReadArray + Parse FlatBuffer sequences seamlessly }"]
+    TRY2 --> FINALLY["finally { if (validly acquired) evaluates ReleaseMutex() cleanly }"]
+    TRY2 -->|"exception mapping"| FINALLY
+    FINALLY --> RETURN["Routing Return values mimicking rethrow constraints properly"]
 
     style ACQ2 fill:#7f4f24,stroke:#582f0e,color:#ffe8d6
     style FINALLY fill:#e9c46a,stroke:#f4a261,color:#264653
@@ -660,109 +659,109 @@ flowchart TD
 
 ## 10. Build Pipeline & Tooling
 
-### Schema Compilatie
+### Schema Generation Tooling Integration
 
-Het `build_schema.ps1` script automatiseert het gehele codegeneratie-proces:
+Leveraging `build_schema.ps1` sequences fundamentally automates massive underlying code-generative cycles rapidly:
 
 ```mermaid
 flowchart TD
-    START["build_schema.ps1"] --> CHECK{"flatc.exe<br/>aanwezig?"}
+    START["build_schema.ps1 triggering routines"] --> CHECK{"Evaluates flatc.exe<br/>existence actively?"}
 
-    CHECK -->|"Nee"| DL["Download flatc v24.3.25<br/>van GitHub Releases"]
-    DL --> EXTRACT["Expand-Archive<br/>naar flatc_tools/"]
+    CHECK -->|"Fails presence"| DL["Retrieves flatc instance v24.3.25<br/>fetching via GitHub Releases"]
+    DL --> EXTRACT["Executes Expand-Archive sequences<br/>routing towards flatc_tools/ folder"]
     EXTRACT --> COMPILE
 
-    CHECK -->|"Ja"| COMPILE["flatc --cpp --csharp<br/>dataset.fbs"]
+    CHECK -->|"Succeeds presence"| COMPILE["Triggers Executable flatc --cpp --csharp<br/>parsing dataset.fbs boundaries"]
 
-    COMPILE --> CPP_OUT["cpp_core/<br/>dataset_generated.h"]
-    COMPILE --> CS_OUT["csharp_core/Generated/<br/>*.cs klassen"]
+    COMPILE --> CPP_OUT["cpp_core/<br/>dataset_generated.h populates cleanly"]
+    COMPILE --> CS_OUT["csharp_core/Generated/<br/>*.cs classes mapped successfully"]
 
-    CPP_OUT --> CMAKE_BUILD["CMake → MSVC<br/>MemMapProducer.exe"]
-    CS_OUT --> DOTNET_BUILD["dotnet build<br/>csharp_core.dll"]
+    CPP_OUT --> CMAKE_BUILD["CMake operations → bridging MSVC endpoints<br/>outputting MemMapProducer.exe"]
+    CS_OUT --> DOTNET_BUILD["Executes dotnet build instances<br/>resolving csharp_core.dll boundaries"]
 
     style DL fill:#023e8a,stroke:#03045e,color:#caf0f8
     style CPP_OUT fill:#2a9d8f,stroke:#264653,color:#fff
     style CS_OUT fill:#e9c46a,stroke:#f4a261,color:#264653
 ```
 
-### C++ Build (CMake + FetchContent)
+### C++ Structural Integration (Mapping CMake alongside FetchContent routines)
 
 ```mermaid
 flowchart LR
-    CMAKE["CMakeLists.txt"] --> FETCH["FetchContent<br/>google/flatbuffers<br/>v24.3.25"]
-    FETCH --> HEADERS["FlatBuffers C++<br/>header-only library"]
-    CMAKE --> EXE["MemMapProducer.exe"]
+    CMAKE["CMakeLists.txt root"] --> FETCH["Resolves FetchContent logic<br/>pinning google/flatbuffers<br/>to version v24.3.25 specifically"]
+    FETCH --> HEADERS["Extracts FlatBuffers Native C++<br/>isolated header-only logic matrices"]
+    CMAKE --> EXE["Executable mapping MemMapProducer.exe seamlessly"]
     HEADERS --> EXE
 
-    NOTE["NOMINMAX + WIN32_LEAN_AND_MEAN<br/>voorkomt Windows.h conflicten"]
+    NOTE["Embeds NOMINMAX alongside WIN32_LEAN_AND_MEAN bounds<br/>exterminating systemic Windows.h collisions smoothly"]
 
     style FETCH fill:#023e8a,stroke:#03045e,color:#caf0f8
     style EXE fill:#2a9d8f,stroke:#264653,color:#fff
 ```
 
-### C# Build (.NET 9)
+### C# Build Parameters (Deploying .NET 9 bounds)
 
 ```mermaid
 flowchart LR
-    CSPROJ["csharp_core.csproj<br/>net9.0-windows"] --> NUGET["NuGet: Google.FlatBuffers<br/>v24.3.25"]
-    CSPROJ --> GEN["Generated/*.cs<br/>(van flatc)"]
-    NUGET --> DLL["csharp_core.dll"]
+    CSPROJ["Project mapping csharp_core.csproj<br/>deploying net9.0-windows logic frames"] --> NUGET["Integrates Remote NuGet blocks: Google.FlatBuffers<br/>version v24.3.25 explicitly mapped"]
+    CSPROJ --> GEN["Sourcing Generated/*.cs matrices<br/>(extracted spanning flatc execution bounds)"]
+    NUGET --> DLL["Resolves compiling csharp_core.dll objects successfully"]
     GEN --> DLL
 
     style DLL fill:#e9c46a,stroke:#f4a261,color:#264653
     style NUGET fill:#023e8a,stroke:#03045e,color:#caf0f8
 ```
 
-**Versie-afstemming:** Zowel de C++ `FetchContent` als het C# NuGet-package en het `flatc`-binary zijn vastgepind op **v24.3.25** om serialisatie-incompatibiliteiten te voorkomen.
+**Rigidity enveloping structural mapping variants:** Locking down specifically native C++ `FetchContent` bounds concurrently aligning C# packaged NuGet components traversing execution commands referencing `.exe` flatc binaries invariably restricts variants pinning identically spanning **v24.3.25** neutralizing systemic catastrophic serialization breakdowns continuously.
 
 ---
 
-## 11. Vergelijking met SharedValueV2 (COM)
+## 11. Comparisons against SharedValueV2 (COM)
 
 ```mermaid
 flowchart TB
-    subgraph "V2: COM/RPC Architectuur"
+    subgraph "V2: Deploying COM/RPC Architecture models explicitly"
         direction TB
-        CLIENT_V2["C# Client<br/>(COM Interop)"]
-        RPC_V2["RPC over Named Pipes<br/>(kernel transitions)"]
-        SERVER_V2["COM Server EXE<br/>(ATL/MFC)"]
-        ENGINE_V2["SharedValueV2<br/>(std::mutex, std::vector)"]
+        CLIENT_V2["C# End-Client<br/>(Leveraging COM Interop boundaries)"]
+        RPC_V2["Executing RPC strings spanning Named Pipes<br/>(Exhaustive kernel transitions)"]
+        SERVER_V2["COM Server Process EXE<br/>(Mapping ATL/MFC arrays natively)"]
+        ENGINE_V2["SharedValueV2 Engine blocks<br/>(Locking std::mutex, mapping std::vector)"]
 
-        CLIENT_V2 -->|"QueryInterface /<br/>Invoke"| RPC_V2
+        CLIENT_V2 -->|"Evaluates QueryInterface /<br/>Firing Invoke parameters"| RPC_V2
         RPC_V2 --> SERVER_V2
         SERVER_V2 --> ENGINE_V2
     end
 
-    subgraph "V3: MemMap Architectuur"
+    subgraph "V3: Advanced MemMap Framework Models"
         direction TB
-        PRODUCER_V3["C++ Producer"]
-        SHARED_V3["Shared Memory<br/>(10 MB kernel page)"]
-        CONSUMER_V3["C# Consumer"]
+        PRODUCER_V3["C++ Engine Producer Node"]
+        SHARED_V3["Memory-Mapped Shared Blocks<br/>(10 MB sprawling kernel page)"]
+        CONSUMER_V3["C# Engine Consumer Node"]
 
-        PRODUCER_V3 -->|"memcpy<br/>(~ns)"| SHARED_V3
-        SHARED_V3 -->|"ReadArray<br/>(~ns)"| CONSUMER_V3
+        PRODUCER_V3 -->|"Executes lightning fast memcpy strings<br/>(~ns execution loops)"| SHARED_V3
+        SHARED_V3 -->|"Evaluating ReadArray sequences directly<br/>(~ns execution loops)"| CONSUMER_V3
     end
 
     style RPC_V2 fill:#e76f51,stroke:#c9302c,color:#fff
     style SHARED_V3 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
 ```
 
-| Aspect | SharedValueV2 (COM) | SharedValueV3 (MemMap) |
+| Trait Aspect Matrix | SharedValueV2 Execution (COM bounds) | SharedValueV3 Operations (MemMap metrics) |
 |---|---|---|
-| **Transport** | RPC over Named Pipes | Direct shared memory |
-| **Serialisatie** | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) |
-| **Latency** | ~1-10 μs per RPC call | ~10-100 ns per read |
-| **Callbacks** | COM Connection Points (`IEventCallback`) | Named Event + C# delegate |
-| **Thread safety** | `std::mutex` (in-process only) | Named Mutex (cross-process) |
-| **Schema** | COM IDL / TypeLib (`.tlb`) | FlatBuffers `.fbs` (cross-language) |
-| **Dynamische data** | `std::vector<BSTR>` | FlatBuffer tables (onbeperkt genest) |
-| **Afhankelijkheden** | ATL, COM Runtime, Registry | Alleen Windows Kernel API |
-| **Registratie nodig** | Ja (`regsvr32` / COM Registry) | Nee (kernel objects by name) |
+| **Underlying transport** | Stiff RPC crossing Named Pipes | Native direct shared memory clusters |
+| **Serialization strings** | Bloated VARIANT / BSTR / SAFEARRAY | Optimized FlatBuffers (zero-copy operations) |
+| **Speed latency** | Dragging ~1-10 μs mapping each RPC traversal | Explosive ~10-100 ns parsing read operations |
+| **Notifications cascades** | Ponderous COM Connection point handling (`IEventCallback`) | Hyper-efficient Named Event parsing adjoining C# delegate handlers |
+| **Multithreading bounds** | `std::mutex` restrictions (strictly localized in-process hooks) | Expanded System Named Mutex bindings (safely mapping external cross-process operations) |
+| **Structural blueprinting** | Limiting COM IDL parameters alongside TypeLib loops (`.tlb`) | Adaptable generalized FlatBuffers configurations `.fbs` (versatile crossing diverse languages safely) |
+| **Dynamic allocations** | Cumbersome `std::vector<BSTR>` string mappings | Highly optimized nested FlatBuffer matrices (spanning inherently limitless logic layers) |
+| **Framework dependencies** | Heaving ATL loops, overlapping COM Runtimes alongside Windows Registry | Austere minimal execution bindings relying entirely executing strict Native Windows Kernel API paths |
+| **Compulsory deployment strings** | Aggressively enforced hooks navigating (`regsvr32` referencing COM mappings natively) | Extinguished cleanly bypassing registrations tracking internal isolated kernel referencing designations |
 
 ---
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [README.md](README.md) — Introductie, projectstructuur en quickstart handleiding.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../SharedValueV2/README.md) — SharedValueV2 C++20 engine (COM-gebaseerd).
+- [README_EN.md](README_EN.md) — Baseline introduction mechanics charting core structures beside quickstart execution guide procedures inherently.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Overarching architecture document defining mapping variables tracking generalized COM Server project logic trees completely.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Tracking foundational COM-based architecture mapping the overarching SharedValueV2 C++20 engine operations flawlessly.

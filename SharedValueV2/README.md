@@ -1,58 +1,59 @@
 # SharedValueV2 — C++20 Header-Only Core Library
 
-Een volledig thread-safe, header-only C++20 library die de kern-logica levert voor gedeelde variabelen en dataset-opslag. Dit is de **engine** die door zowel de Legacy DLL als de EXE COM Server wordt ingezet.
+A fully thread-safe, header-only C++20 library delivering the core logic powering shared variables and dataset-storage operations. This represents the absolute **engine** driving both the Legacy In-Process DLL alongside the Out-of-Process EXE COM Server.
 
-## Rol binnen het project
+## Role Within the Project
 
-`SharedValueV2` is de **enige bron van waarheid** (Single Source of Truth) voor alle business-logica binnen het COM-ecosysteem. De ATL COM wrappers in zowel [`ATLProjectcomserverLegacy/`](../ATLProjectcomserverLegacy/) als [`ATLProjectcomserverExe/`](../ATLProjectcomserverExe/) delegeren interne calls direct naar deze headers. 
+`SharedValueV2` acts as the **Single Source of Truth** dictating all business logic across the COM ecosystem. The overarching ATL COM wrappers resting inside both [`ATLProjectcomserverLegacy/`](../ATLProjectcomserverLegacy/) as well as [`ATLProjectcomserverExe/`](../ATLProjectcomserverExe/) delegate internally routing their interface requests directly towards these native headers. 
 
-Het scheiden van de C++ core van de COM-laag biedt enorme voordelen:
-- **Testbaarheid**: De core kan exhaustief getest worden (inclusief multithreaded edge-cases) via standaard C++ test frameworks, zonder COM initialisatie (`CoInitialize`), registry keys of proxy/stub overhead.
-- **Herbruikbaarheid**: Deze library kan feilloos worden geïntegreerd in andere C++ applicaties (ongeacht of deze COM gebruiken of niet).
-- **Performance**: Omdat het header-only is, geniet de compiler van maximale inlining, wat resulteert in zero-cost abstractions buiten de lock-grenzen en events.
+Decoupling the pristine C++ core from the heavy COM-layer offers tremendous benefits:
+- **Agile Testability**: The core can be completely exhausted through unit and stress tests (resolving multithreaded edge-cases) using standard C++ test frameworks, devoid of COM initialization headaches (`CoInitialize`), registry keys locking, or proxy/stub performance overheads.
+- **Flawless Reusability**: The core library easily integrates universally into standalone C++ application boundaries entirely ignoring whether COM infrastructure exists or not.
+- **Optimal Performance**: Functioning purely header-only enforces compilers executing maximum inlining maneuvers, yielding zero-cost abstractions escaping standard locked domains or event fires.
 
-## Kernconcepten en Architectuur
+## Core Concepts & Architecture
 
-De bibliotheek leunt op moderne C++ principes en maakt robuust gebruik van geavanceerde design patterns.
+The library aggressively leans on modern C++ paradigms, robustly enforcing advanced structural design patterns.
 
 ### 1. Monitor Pattern (Safety First)
-Data en synchronisatie zijn onlosmakelijk aan elkaar gekoppeld. Variabelen worden genest in een monitor structuur. State is *uitsluitend* toegankelijk via interne C++ RAII locks (bijvoorbeeld binnen `.get()` of `.set()`). Zodra de variabele bewerkt of gelezen wordt, bezit de thread gegarandeerd de actieve lock, welke automatisch losgelaten wordt zodra de bewerking uit scope gaat.
+Data alongside synchronization mechanisms stand inextricably bound framing a Monitor enclosure. 
+State access remains tightly forbidden unless passing through designated secured C++ RAII bounds (e.g. initiating via local scopes from `.get()` or internal mutating `.set()` loops). Once modifications commence, the calling thread possesses guaranteed exclusive locking authority globally, automatically relinquishing authority upon scope destruction. 
 
 ### 2. Observer Pattern (Deadlock-Free)
-Variabelen en Datasets zenden notificaties uit zodra de data wijzigt (publish/subscribe EventBus). 
-**Cruciaal:** callbacks naar observers worden geresolueerd en verstuurd *onmiddellijk nadat de mutex is ontgrendeld*. De eventbus kopieert eerst de lijst van luisteraars terwijl hij de lock nog houdt deelt ze daarna asynchroon mede. Dit strakke patroon voorkomt de beruchte deadlocks waarbij thread A achter een lock nog notificaties verstuurt en wacht op thead B, terwijl thead B een event krijgt en tegelijkertijd re-entrant dezelfde block probeert in te komen.
+Event boundaries broadcast notifications (via a publish/subscribe EventBus architecture) whenever payload data fundamentally flips locally.
+**Crucially:** Callback triggers engaging external listeners execute *strictly after the mutex fully unlatches*. The event bus actively clones subscriber registries during secure locks before systematically dispatching signals resting totally uncoupled from critical path executions. This definitively annihilates notorious cyclical deadlock risks where Thread A pauses holding locks while Thread B scrambles capturing an event to sequentially mutate the same object tree.
 
-### 3. Policy-Based Design (Flexibele Locks)
-Niet elke situatie vereist een full-os OS-level Kernel Mutex. De generieke template `SharedValue<T, LockPolicy>` staat toe dat je de vergrendelingsstrategie compile-time injecteert afhankelijk van je usecase:
-- **`LocalMutexPolicy`**: Maakt gebruik van de ultra-snelle `std::mutex`. Perfect voor multithreading binnen één en hetzelfde proces (high performance in-process).
-- **`NamedSystemMutexPolicy`**: Wrapt de native Windows OS API call `CreateMutex` (Named Mutex). Vereist voor Inter-Process Communicatie (bijv. in de COM OutOfProcess EXE om botsingen over processor boundary heen aan te pakken).
-- **`NullMutexPolicy`**: Een dummy (no-op) implementatie voor absolute zero-overhead theorie optimalisatie in een single-threaded context. 
+### 3. Policy-Based Design (Pluggable Lockings)
+Circumventing unnecessary heavyweight active OS Kernel dependencies, the generic templated design `SharedValue<T, LockPolicy>` enforces compile-time directive injections matching specific execution environments:
+- **`LocalMutexPolicy`**: Employs an ultra-fast raw `std::mutex`. Unrivaled high-performance capabilities assuming scopes remain trapped traversing single memory-space processes strictly.
+- **`NamedSystemMutexPolicy`**: Wrapping natively Windows systems functions traversing system wide `CreateMutex` boundaries. Strongly mandated framing explicit Inter-Process bounds (e.g. crossing EXE Server limits routing down towards active parallel clients).
+- **`NullMutexPolicy`**: Dummy drop-off directive ensuring raw optimized zero-overhead mechanics exclusively targeting inherently safe single-threaded contexts in theory models.
 
-## Directorystructuur
+## Directory Layout
 
 ```
 SharedValueV2/
-├── CMakeLists.txt          # Build configuratie voor standalone tests
-├── include/                # Header-only library bronbestanden
-│   ├── SharedValue.hpp     # Generieke gedeelde variabele met templated lock policy
+├── CMakeLists.txt          # Build mappings driving standalone tests
+├── include/                # Header-only library footprints
+│   ├── SharedValue.hpp     # Generic shared payload harboring templated lock policies
 │   ├── DatasetStore.hpp    # Thread-safe overarching key-value store (ordered/unordered)
-│   ├── StorageEngine.hpp   # Abstractie over std::map en std::unordered_map
-│   ├── Errors.hpp          # Exception hiërarchie (SharedValueException subtypes)
-│   ├── EventBus.hpp        # Publish/subscribe event systeem
-│   ├── LockPolicies.hpp    # Lock policies: Local, Named, Null
-│   ├── Observers.hpp       # Base observer interface definities
-│   └── DatasetObserver.hpp # Dataset-specifieke observer interface
-├── tests/                  # Standalone C++ tests
-│   ├── UnitTests.cpp       # Functionele unit tests
-│   └── StressTest.cpp      # Multithreaded concurrency stress test
-└── build/                  # CMake build output (niet in version control)
+│   ├── StorageEngine.hpp   # Abstraction sweeping over std::map plus std::unordered_map
+│   ├── Errors.hpp          # Exception hierarchy chains (SharedValueException subtypes)
+│   ├── EventBus.hpp        # Publish/subscribe event mechanics
+│   ├── LockPolicies.hpp    # Directive scopes: Local, Named, Null
+│   ├── Observers.hpp       # Base observer interface structures
+│   └── DatasetObserver.hpp # Dataset-specific observer scaffolding
+├── tests/                  # Uncoupled standalone C++ sequences
+│   ├── UnitTests.cpp       # Functional unit sweeps
+│   └── StressTest.cpp      # Multithreaded concurrency bombardment
+└── build/                  # CMake drop-offs (untethered from version control)
 ```
 
-## Uitgebreide Voorbeelden & Gebruik
+## Practical Implementation Examples
 
-Omdat de library header-only is, is er geen link-stap nodig (geen `.lib` of `.dll`). Je voegt enkel de `include/` directory stroomwaarts toe aan de C++ compiler flags.
+Operating exclusively leveraging header-only configurations completely bypasses archaic linking parameters aside from generating tests locally. Effortlessly merge the `include/` directory path steering the compiler downstream towards inclusion.
 
-### In theorie: Thread-safe Value Tracking
+### Basic Thread-Safe Value Tracking
 
 ```cpp
 #include "SharedValueV2/include/SharedValue.hpp"
@@ -61,83 +62,83 @@ Omdat de library header-only is, is er geen link-stap nodig (geen `.lib` of `.dl
 
 using namespace SharedValueV2;
 
-// 1. Zelfbouw observer klasse maken
+// 1. Establish custom listener protocols
 class MyObserver : public IObserver {
 public:
     void onValueChanged() override {
-        std::cout << "Waarde is gewijzigd door andere thread of call!" << std::endl;
+        std::cout << "Target value heavily altered capturing cross-thread interactions!" << std::endl;
     }
 };
 
-// 2. Instantieer een veilige string met een snelle lokale std::mutex policy
+// 2. Initialize bound variables wielding hyper fast local locking paradigms
 SharedValue<std::string, LocalMutexPolicy> username;
 
-// 3. Koppel en bind the listener aan 
+// 3. Register subscriptions mapping shared memory 
 auto obs = std::make_shared<MyObserver>();
 username.addObserver(obs);
 
-// 4. Veilige wijziging over threads (acquire -> mutate -> release -> notify all observer kopieën)
+// 4. Guaranteed thread-safe manipulations (acquire lock -> mutate -> release lock -> emit notifications to cloned array)
 username.set("Admin"); 
 
-// 5. Veilige readouts
-std::string currentVal = username.get(); // Kopieert de inhoud volledig veilig naar memory stack
+// 5. Guaranteed thread-safe readouts
+std::string currentVal = username.get(); // Safely clones snapshot routing it to current process stack
 ```
 
-### Advanced: DatasetStore in Bedrijf 
+### Advanced: Dataset Operations in Operations
 
-Voor omvangrijke verzamelingen van variabelen is de `DatasetStore` ontwikkeld. Deze beheert data in abstracte lagen passend als een NoSQL in-memory map.
+Orchestrating huge aggregates extensively relies upon `DatasetStore` scaffolding capabilities. Functioning closely paralleling isolated NoSQL in-memory map grids.
 
 ```cpp
 #include "SharedValueV2/include/DatasetStore.hpp"
 
-// Gebruik een Named Mutex policy zodat cross-process COM requests over de OS stack veilig blijven.
+// Mandating explicit Named Mutex policies traversing overarching cross-process boundaries safely. 
 DatasetStore<NamedSystemMutexPolicy> store;
 
-// Omschakelen backends: dynamisch switchen tussen std::map (geordend) of hash map via O(1) performance
+// Targetting engine setups dynamically assigning Ordered map vs high-speed unordered Hashing
 store.SetStorageMode(StorageMode::UNORDERED_MAP);
 
-// Thread-cross manipulering
-store.InsertValue(100, "Speler Locatie X");
-store.InsertValue(101, "Speler Locatie Y");
+// Execute heavily synchronized operations avoiding crash barriers or torn data transfers
+store.InsertValue(100, "Player Vector Offset X");
+store.InsertValue(101, "Player Vector Offset Y");
 
-auto eventBus = store.GetEventBus(); // Koppel de EventBus via een pointer lock.
+auto eventBus = store.GetEventBus(); // Bind strictly harnessing dynamic notifications securely
 ```
 
-## Exception Handling
-De bibliotheek gooit nooit native raw pointers naar C++ exceptions. Fouten zijn ingekaderd in gestandaardiseerde sub-classes met `SharedValueException` als vader (referentie te lezen binnen `Errors.hpp`):
-- `PolicyException`: Opgeblazen bij fatale connectie bugs aan OS kant (bijv. fout bij `CreateMutex`).
-- `StorageModeException`: Voorkomt memory allocaties wanneer er van runtime structuur gewisseld wordt en arrays al zware datacollectie bevatten.
-- `EventBusException`: Specifieke abonnement-failures (bv: dubbel registreren, missende nulls en deadlocks).
+## Exception Hierarchy
+The framework vehemently dodges broadcasting unpredictable primitive C++ pointers relying natively upon disciplined Sub-classes inherently descending navigating `SharedValueException` base branches mapped strictly crossing `Errors.hpp`:
+- `PolicyException`: Trapped encountering insurmountable circumstances orchestrating core Windows Kernel APIs (`CreateMutex` collapses).
+- `StorageModeException`: Interdicting attempts alternating structures spanning arrays back passing to trees assuming current records actively populate the payload block currently.
+- `EventBusException`: Explicit registry-blocks eliminating invalid listeners or dodging recursive infinite loops.
 
-## Compilatie & Testen
+## Compilation & Testing
 
-De C++20 multi-threaded concurrency en unit validatie suites kunnen in 100% isolatie gestart worden, wat de "Test-Driven Development (TDD)" cyclus extreem snel doet stempelen.
+This purely isolated C++20 domain fully sanctions test executions eviscerating any cumbersome COM runtime needs, skyrocketing the agility backing stringent TDD verification sweeps.
 
 ```powershell
 cd SharedValueV2
 
-# Genereer de nodige CMake backend bestanden in \build
+# Spin generating cache mappings strictly localized navigating towards \build 
 cmake -B build
 
-# Target de build config (Release mode is kritiek ten volle voor real-world race validation in de stress tests!)
+# Target exhaustive build compilation cycles (Release mode absolutely mandatory brutally simulating true parallel racing across stress conditions!)
 cmake --build build --config Release
 
-# 1. Start basistests voor functionele logica checks
+# 1. Execute streamlined functional mapping checks
 .\build\tests\Release\UnitTests.exe
 
-# 2. Start duizenddradige thread bom voor deadlock validaties
+# 2. Execute severe deadlock bombardment tests crashing hundred threaded synchronization logic safely
 .\build\tests\Release\StressTest.exe
 ```
 
-## Vereisten
+## Requirements
 
-- **Taal:** Een C++20 compatibele compiler wegens geavanceerde template concepts (MSVC v143+, GCC 12+, Clang 14+).
-- **Tooling:** CMake ≥ 3.20 (alleen noodzakelijk voor test integraties).
-- **OS Platform:** De IPC default policies zoals `NamedSystemMutexPolicy` integreren direct met Windows API (`Windows.h`).
+- **C++ Specifications:** Impeccably compliant C++20 compilers mandating advanced RAII integration schemas alongside core language standards (MSVC v143+, GCC 12+, Clang 14+).
+- **Environment Tooling:** CMake ≥ 3.20 (strictly tied routing test suites independently).
+- **Operating Platforms:** Operating IPC implementations (`NamedSystemMutexPolicy`) heavily map hooking Windows OS native footprints bridging `<Windows.h>`.
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [CODE_REFERENCE.md](CODE_REFERENCE.md) — Volledige C++ API referentie en architectuur overzicht van de SharedValueV2 API's en iteraties.
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het project in algemene zin.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Architectuur voor het gehele integratie COM platform.
-- [README.md](../ATLProjectcomserverExe/README.md) — Lees wijzer voor de Out-of-Process implementatie COM variant op basis van dit framework.
+- [CODE_REFERENCE_EN.md](CODE_REFERENCE_EN.md) — Comprehensive API reference plus exact structural behavior mapping SharedValueV2 details thoroughly.
+- [README_EN.md](../README_EN.md) — Project starting block mapping universal integrations generally.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Core schematics projecting COM overarching layouts respectively.
+- [README_EN.md](../ATLProjectcomserverExe/README_EN.md) — Guidance bridging Out-of-process COM implementations heavily derived around the exact SharedValue framework layouts.

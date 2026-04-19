@@ -1,62 +1,62 @@
 # SharedValueV3 (Memory-Mapped Engine)
 
-Dit is de V3 generatie van de SharedValue architectuur. In plaats van Out-of-Process COM (RPC over Named Pipes), draait dit model 100% op **High-Performance Memory-Mapped Files (Windows Shared Memory)**.
+This reflects the V3 generation iteration addressing the SharedValue architecture. Deviating extensively away from Out-of-Process COM (RPC leveraging Named Pipes), this model operates 100% targeting **High-Performance Memory-Mapped Files (Windows Shared Memory)**.
 
-## Waarom deze architectuur?
-De traditionele COM-methode kent een kleine delay per functieaanroep vanwege RPC marshaling (context switches). Als je 10.000 records direct stuk voor stuk in-memory wilt benaderen vanuit C#, is dat met COM niet mogelijk zonder gigantische snelheidsverliezen, *tenzij* je alles in één grote array ophaalt.
+## Why this architecture?
+The vintage COM-methodology shoulders inevitable micro-delays impacting function calls heavily tied towards RPC marshaling parameters (initiating context switches). Providing you actively attempt pulling 10,000 respective data-points piecemeal streaming in-memory reaching C# thresholds, tackling this exclusively through COM guarantees monolithic speed reductions, *unless* fetching aggregates looping single monumental array hauls.
 
-Deze **MemMap Engine** elimineert die overhead volledig:
-1. **0% Overhead & Zero-Copy**: C# leest exact hetzelfde geheugenblok als waar C++ naar schrijft. Via **FlatBuffers** kunnen willekeurig geneste of dynamische datastructuren als één aaneengesloten block worden afgevuurd en *zonder parsing* in C# of C++ uitgelezen worden.
-2. **0% CPU Callbacks**: Om toch push-notificaties (COM Events of Callbacks) te behouden, leunt deze engine op **Windows Named Events** (`CreateEventW`). De C# listenthread slaapt met 0% CPU footprint totdat de producer data inlaadt en de trigger overhaalt via inter-process communicatie.
-3. **Multi-Process Veilig**: Data corruptie is onmogelijk gemaakt door een actieve **Windows Named Mutex**, afgedwongen in de centrale de `SharedValueEngine` wrapper.
+The **MemMap Engine** spectacularly obliterates these hurdles:
+1. **0% Overhead & Zero-Copy**: C# accesses the exact identical memory-partition previously manipulated passing through C++. Propelled via **FlatBuffers** infinitely layered nesting/dynamic blocks serialize blasting downwards entirely packed as solitary unbroken segments yielding flawless readouts *devoid completely of parser-mechanics* spanning both C# besides C++.
+2. **0% CPU Callbacks**: Maintaining legacy push-notifications (mirroring COM occurrences alongside callbacks), this mechanism rests inherently on **Windows Named Events** (`CreateEventW`). The C# listenthread remains profoundly slumbering clocking 0% CPU consumption indefinitely observing the moment the producer loads data discharging the payload snapping the communication trigger.
+3. **Multi-Process Bulletproof**: Data scrambling stands utterly eradicated enforced navigating active **Windows Named Mutex** barriers rigidly orchestrated dropping within the core `SharedValueEngine` hull.
 
-## Levenscyclus & Ontkoppeling
+## Lifecycle & Decoupling
 
-De producer en consumer(s) zijn **volledig ontkoppeld**. Windows kernel objects (MMF, Mutex, Event) leven zolang er minstens **één proces** een handle open heeft. Dit betekent:
+The producer sitting alongside respective consumer nodes remain **completely isolated**. Windows kernel components spanning (MMF, Mutex, Event) persist autonomously assuming natively **one singular process** claims a hanging handle. Fundamentally proving:
 
-- De producer draait **oneindig** en schrijft data ongeacht of er consumers zijn
-- Consumers kunnen **op elk moment** verbinden, data lezen, en weer loskoppelen
-- **Meerdere consumers** tegelijk zijn mogelijk (ieder opent een eigen handle naar dezelfde kernel objects)
-- De producer merkt niets van consumers (fire-and-forget model)
+- The producer chugs **infinitely** injecting pipelines dismissing consumer connectivity thoroughly
+- Consumers remain completely free **whenever they choose** tapping the chain, inhaling readouts dropping off
+- **Multiple consumers** operate seamlessly synchronously (each unlocking dedicated local handlers gripping universal kernel roots)
+- Producers operate fully oblivious dismissing consumers (fire-and-forget design)
 
-> **Let op:** Als de producer stopt terwijl er geen consumers verbonden zijn, vernietigt Windows alle kernel objects (refcount → 0). Een consumer die daarna start, kan niet meer verbinden. Voor geautomatiseerde tests biedt de producer daarom een `--linger` parameter om de kernel objects langer in leven te houden. Zie [ARCHITECTURE.md](ARCHITECTURE.md#kernel-object-levenscyclus-en-reference-counting) voor de volledige uitleg.
+> **Important:** Provided the producer terminates leaving absolutely zero consumer counterparts chained, Windows completely incinerates the kernel framework (refcount → 0). Successive consumers booting up drastically fail establishing links. Benefiting automated test-sweeps exclusively, the producer extends fielding a `--linger` parameter suspending kernel lifecycle eradication prolonging presence slightly. Observe [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md#kernel-object-lifecycle-and-reference-counting) digesting exhaustive nuances.
 
-## Project structuur
-*   `schema/` bevat de `dataset.fbs`. Dit is de FlatBuffers datadefinitie. 
-*   `cpp_core/` is de C++ Native Producer.
-*   `csharp_core/` is de C# Managed Consumer.
-*   `tests/` bevat de geautomatiseerde end-to-end test suite.
-*   `build_schema.ps1` downloadt automatisch de Google `flatc` compiler en regenereert de wrapper code o.b.v. je schema in beide talen.
+## Project Structure
+*   `schema/` encapsulates `dataset.fbs`. Mapping out FlatBuffers data blueprints fundamentally. 
+*   `cpp_core/` embodies the Native C++ Producer component.
+*   `csharp_core/` embodies the Managed C# Consumer node.
+*   `tests/` encases comprehensive automated end-to-end framework sweeps.
+*   `build_schema.ps1` extracts silently retrieving Google `flatc` rendering automated wrap-logic derived navigating schema parameters targeting both dialects.
 
-## Hoe te draaien
+## How to execute
 
-### Interactief (handmatig)
-1. **Open een Terminal:** Start de producer met optionele parameters:
+### Interactive (Manual flow)
+1. **Launch a Terminal window:** Engage the producer chaining optional modifiers:
    ```powershell
    .\cpp_core\build\Release\MemMapProducer.exe
    .\cpp_core\build\Release\MemMapProducer.exe --count 10 --interval 500 --rows 3
    ```
-2. **Open een 2e Terminal:** Start de consumer:
+2. **Launch a secondary Terminal:** Spark the consumer instance:
    ```powershell
    cd csharp_core
    dotnet run
-   dotnet run -- --count 5    # Auto-exit na 5 events
+   dotnet run -- --count 5    # Auto-termination triggering following 5 occurrences
    ```
 
-### Geautomatiseerd (Test Suite)
-Draai de volledige end-to-end test suite die 6 scenario's valideert:
+### Automated (Test Suite)
+Unleash the comprehensive end-to-end suite effectively checking 6 distinctive patterns:
 ```powershell
-.\tests\Run-MemMapTests.ps1             # Inclusief build
-.\tests\Run-MemMapTests.ps1 -SkipBuild  # Zonder rebuild
+.\tests\Run-MemMapTests.ps1             # Enforces clean builds prior
+.\tests\Run-MemMapTests.ps1 -SkipBuild  # Sidesteps re-compilations
 ```
 
-Zie [`tests/README.md`](tests/README.md) voor het volledige testoverzicht en alle CLI-argumenten.
+Browse [`tests/README_EN.md`](tests/README_EN.md) targeting the fully exhaustive test breakdown observing all CLI flag extensions.
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Uitgebreid architectuurdocument met Mermaid-diagrammen over Memory-Mapped Files, FlatBuffers serialisatie, de synchronisatieprimitieven (Mutex/Event), de producer-consumer levenscyclus, exception hiërarchieën, en de build pipeline.
-- [INSTALL.md](INSTALL.md) — Instructies voor het configureren en bouwen van de omgeving.
-- [CODE_REFERENCE.md](CODE_REFERENCE.md) — Overzicht van de belangrijkste bestanden, componenten en klassen.
-- [tests/README.md](tests/README.md) — Testoverzicht, CLI-argumenten, en uitleg over testscenario's.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [CHANGELOG.md](../CHANGELOG.md) — Overzicht van alle wijzigingen en release notes.
+- [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md) — Expansive architecture documentation plotting Mermaid-schematics charting Memory-Mapped Files, FlatBuffers serialization, synchronous structures (Mutex/Event), producer-consumer pacing loops, hierarchical exception mapping, flanked via the pipeline build metrics.
+- [INSTALL_EN.md](INSTALL_EN.md) — Instructions for building and configuring the environment.
+- [CODE_REFERENCE_EN.md](CODE_REFERENCE_EN.md) — Overview of the key components, files, and classes.
+- [tests/README_EN.md](tests/README_EN.md) — Suite overview tracking, CLI modifier metrics, expanding upon scenario details.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
+- [CHANGELOG_EN.md](../CHANGELOG_EN.md) — Comprehensive log reflecting overarching amendments adjoining release notes.

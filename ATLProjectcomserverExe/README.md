@@ -1,17 +1,17 @@
 # ATLProjectcomserverExe — Out-of-Process EXE COM Server
 
-Dit is de **productie-variant** van de ATL COM Server, gebouwd als een **Out-of-Process EXE** (`LocalServer32`). De server draait als een zelfstandig Windows-proces dat via RPC-marshaling wordt aangesproken door meerdere onafhankelijke client-processen.
+This represents the **production variant** of the ATL COM Server, constructed as an **Out-of-Process EXE** (`LocalServer32`). The server runs as an autonomous Windows process addressed via RPC marshaling by multiple independent client processes.
 
-## Rol binnen het project
+## Role within the project
 
-Dit is de **aanbevolen architectuur** voor cross-process data-sharing:
-- Eén centraal serverproces beheert de gedeelde state (singleton).
-- Meerdere clients (C#, VBScript, Python, C++) communiceren gelijktijdig via Windows COM/RPC.
-- Graceful shutdown via `ISharedValue::ShutdownServer()`.
+This is the **recommended architecture** concerning cross-process data sharing:
+- A single central server process manages the shared state (singleton).
+- Multiple clients (C#, VBScript, Python, C++) communicate concurrently via Windows COM/RPC.
+- Graceful shutdown triggered via `ISharedValue::ShutdownServer()`.
 
 ---
 
-## Architectuuroverzicht
+## Architecture Overview
 
 ```
 ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐
@@ -43,40 +43,40 @@ Dit is de **aanbevolen architectuur** voor cross-process data-sharing:
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Verschil met de Legacy DLL
+### Difference against the Legacy DLL
 
-| Eigenschap | Legacy DLL (InprocServer32) | **EXE Server (LocalServer32)** |
+| Property | Legacy DLL (InprocServer32) | **EXE Server (LocalServer32)** |
 |---|---|---|
-| Proces | Geladen in client-proces | Eigen Windows-proces |
-| Communicatie | Directe vtable calls | RPC via LRPC Named Pipe |
-| Data sharing | ❌ Per-proces kopie | ✅ Echte cross-process singleton |
-| Registratie | `regsvr32` | `/RegServer` (zelf-registrerend) |
-| Autostart | n.v.t. | SCM start EXE on-demand |
-| Shutdown | Automatisch bij `DllCanUnloadNow` | Expliciet via `ShutdownServer()` |
+| Process | Loaded within client process | Own Windows process |
+| Communication | Direct vtable calls | RPC via LRPC Named Pipe |
+| Data sharing | ❌ Per-process copy | ✅ Genuine cross-process singleton |
+| Registration | `regsvr32` | `/RegServer` (self-registering) |
+| Autostart | N/A | SCM launches EXE on-demand |
+| Shutdown | Automatic at `DllCanUnloadNow` | Explicit via `ShutdownServer()` |
 
 ---
 
-## Opbouw, Werking & Ontwerpprincipes
+## Buildup, Mechanics & Design Principles
 
-De opbouw van de EXE server rust op een strakke scheiding tussen enerzijds de **COM/RPC communicatielaag** en anderzijds de **C++20 State Engine** (`SharedValueV2`).
+The construction of the EXE server rests upon a strict separation dividing the **COM/RPC communication layer** versus the **C++20 State Engine** (`SharedValueV2`).
 
-### 1. Waarom een Out-of-Process (EXE) Server?
-Een reguliere COM DLL (In-Process) wordt door Windows rechtstreeks in de geheugenruimte van het aanroepende proces geladen. Hierdoor hebben C#- en VBScript-applicaties in de praktijk ieder hun eigen, geïsoleerde kopie van de data. Door de component om te bouwen naar een **LocalServer32 EXE** treden de Windows COM subsysteem en *LRPC Named Pipes* op als IPC (Inter-Process Communication) verbinding. Het resultaat is dat al die verschillende applicaties via proxies kletsen met **exact hetzelfde fysieke C++ proces**.
+### 1. Why an Out-of-Process (EXE) Server?
+A standard COM DLL (In-Process) gets loaded by Windows directly into the memory footprint of the calling process. Consequently, C# and VBScript applications invariably possess their individual, isolated clones of the data. Converting the component into a **LocalServer32 EXE** causes the Windows COM subsystem and *LRPC Named Pipes* to act as an IPC (Inter-Process Communication) connection. The result entails all those diverse applications chatting via proxies to **identically the exact same physical C++ process**.
 
-### 2. Singleton Gedrag & Data Relaties
-Het centrale knooppunt is de `CSharedValue` klasse. Dankzij de `DECLARE_CLASSFACTORY_SINGLETON` macro genereert ATL slechts één exemplaar van deze klasse binnen de server, ongeacht of er één of honderd clients op verbinden. Tijdens de creatie (`FinalConstruct`) van deze singleton wordt ook meteen een `CDatasetProxy` aangemaakt. Hierdoor bestaat er van de gehele status (zowel de losse gedeelde variabele als de key-value store) effectief maar één waarheid die benaderbaar is voor elke client.
+### 2. Singleton Behavior & Data Relations
+The central hub is the `CSharedValue` class. Empowered by the `DECLARE_CLASSFACTORY_SINGLETON` macro, ATL generates barely one specimen of this class inside the server, disregarding whether one or a hundred clients hook up. During creation (`FinalConstruct`) of this singleton naturally a `CDatasetProxy` is instantly forged alongside. By doing so, the overarching status (both the loose shared variable and the key-value store) effectively exists as a single truth accessible by any client.
 
-### 3. De Bridging Layer (Type Conversies)
-Daar waar COM vasthoudt aan oude binaire C-standaarden (zoals `BSTR` strings en `SAFEARRAY`s), is de `SharedValueV2` core geschreven in modern C++ (`std::wstring`, `std::vector`, `std::optional`). De implementatiebestanden van de ATL server (`DatasetProxy.cpp`, `SharedValue.cpp`) dienen daarom vooral als vertaalslag: inkomende parameters worden ingelezen, geconverteerd, aan de engine gevoerd, en resultaten worden vice versa in een `SAFEARRAY` of `VARIANT` klaargezet om via RPC correct ge-marshalled te kunnen worden naar de originele aanroepende applicatie.
+### 3. The Bridging Layer (Type Conversions)
+Whereas COM stubbornly clings to archaic binary C-standards (like `BSTR` strings and `SAFEARRAY`s), the `SharedValueV2` core screams modern C++ (`std::wstring`, `std::vector`, `std::optional`). The implementation files for the ATL server (`DatasetProxy.cpp`, `SharedValue.cpp`) thus mainly serve acting as translators: inbound parameters are intercepted, converted, shoveled into the engine, and vice versa returning verdicts are staged inside a `SAFEARRAY` or `VARIANT` to successfully get marshaled via RPC returning towards the parent calling application.
 
-### 4. Concurrency & Deadlock-preventie
-Bij cross-process event handling kan een gecrashte of enorm trage client normalitair het gehele server-proces (en daarmee alle andere clients) ophouden. Het ontwerp voorkomt dit doordat de `LocalMutexPolicy` (die de interne C++ locks beheert) in *alle* gevallen the callback-lijst kopieert, de lock sluit, en pas *daarna* op de clientside proxies de callbacks trilt. Dit garandeert dat de communicatie-bottleneck nooit de data-integriteit van de engine gijzelt.
+### 4. Concurrency & Deadlock Prevention
+Spanning cross-process event handling, a stalled or atrociously sluggish client usually bottlenecks the entire server process (simultaneously suffocating all other clients). The design preempts this since the `LocalMutexPolicy` (governing internal C++ locks) categorically copies the callback list under all circumstances, locks down, and inherently *afterwards* reverberates the callbacks triggering those clientside proxies. This guarantees that the communication bottleneck never entraps the data-integrity governing the engine.
 
 ---
 
-## COM Interfaces — Technische Details
+## COM Interfaces — Technical Details
 
-### `ISharedValue` — Gedeelde State Singleton
+### `ISharedValue` — Shared State Singleton
 
 ```idl
 interface ISharedValue : IDispatch
@@ -95,15 +95,15 @@ interface ISharedValue : IDispatch
 };
 ```
 
-**Intern:** Geïmplementeerd door `CSharedValue`, gedeclareerd als **singleton** via `DECLARE_CLASSFACTORY_SINGLETON`. Alle clients ongeacht proces delen dezelfde instantie. De `m_core` is een `SharedValueV2::SharedValue<CComVariant, LocalMutexPolicy>`.
+**Internal:** Implemented inside `CSharedValue`, mapped as a **singleton** using `DECLARE_CLASSFACTORY_SINGLETON`. All clients disregard process boundaries sharing this identical instance. The `m_core` wraps a `SharedValueV2::SharedValue<CComVariant, LocalMutexPolicy>`.
 
-`FinalConstruct()` maakt automatisch een server-side `CDatasetProxy` aan en slaat deze op als `CComVariant(VT_DISPATCH)` — clients kunnen de proxy ophalen met `GetValue()`.
+`FinalConstruct()` autonomously drops a server-side `CDatasetProxy` wrapping it as `CComVariant(VT_DISPATCH)` — clients fetch said proxy invoking `GetValue()`.
 
-**`ShutdownServer()` werking:** Verwijdert de DatasetProxy reference via `m_core.SetValue(CComVariant())` en roept `_AtlModule.Unlock()` aan om de extra lock uit `_tWinMain` vrij te geven. Dit beëindigt de Win32 message loop en sluit het proces.
+**`ShutdownServer()` operation:** Obiterates the DatasetProxy reference relying on `m_core.SetValue(CComVariant())` alongside firing `_AtlModule.Unlock()` resolving the hanging extra lock from `_tWinMain`. This breaks the Win32 message loop gracefully terminating the process.
 
 ---
 
-### `IDatasetProxy` — Pagineerbare Key-Value Store
+### `IDatasetProxy` — Pageable Key-Value Store
 
 ```idl
 interface IDatasetProxy : IDispatch
@@ -133,23 +133,23 @@ interface IDatasetProxy : IDispatch
 };
 ```
 
-**Intern:** Delegeert naar `SharedValueV2::DatasetStore<std::wstring>`. De store ondersteunt two storage modes via het **Strategy Pattern**:
-- **Mode 0 (Ordered):** `std::map<wstring, wstring>` — keys gesorteerd.
-- **Mode 1 (Unordered):** `std::unordered_map<wstring, wstring>` — snellere O(1) lookups.
+**Internal:** Delegates everything downward at `SharedValueV2::DatasetStore<std::wstring>`. The store fields opposing storage modes employing the **Strategy Pattern**:
+- **Mode 0 (Ordered):** `std::map<wstring, wstring>` — keys rigorously sorted.
+- **Mode 1 (Unordered):** `std::unordered_map<wstring, wstring>` — faster O(1) jump lookups.
 
-**SAFEARRAY Marshaling:** `FetchPageKeys` retourneert een 1D `SAFEARRAY(VT_VARIANT)` met alle keys als `BSTR`. `FetchPageData` retourneert een 2D `SAFEARRAY[rows][2]` met key-value paren. Deze arrays worden automatisch gemarshald over de RPC-grens door de MIDL-gegenereerde proxy/stub code.
+**SAFEARRAY Marshaling:** `FetchPageKeys` fires back a 1D `SAFEARRAY(VT_VARIANT)` containing every key typed `BSTR`. `FetchPageData` launches a 2D `SAFEARRAY[rows][2]` holding overarching key-value pairs. Such arrays get seamlessly marshaled piercing the RPC border courtesy of MIDL-generated proxy/stub code.
 
-**Type-conversies in DatasetProxy:**
-| COM Type (in) | C++ Type (intern) | Conversie |
+**Type Conversions inside DatasetProxy:**
+| COM Type (in) | C++ Type (internal) | Conversion |
 |---|---|---|
 | `BSTR` key/value | `std::wstring` | `std::wstring(key)` constructor |
-| `VARIANT_BOOL` retour | `bool` | `VARIANT_TRUE` / `VARIANT_FALSE` |
+| `VARIANT_BOOL` return | `bool` | `VARIANT_TRUE` / `VARIANT_FALSE` |
 | `LONG` mode/count | `size_t` / `StorageMode` | `static_cast` |
-| `VARIANT*` array retour | `std::vector<wstring>` | `CComSafeArray<VARIANT>` builder |
+| `VARIANT*` array return | `std::vector<wstring>` | `CComSafeArray<VARIANT>` builder |
 
 ---
 
-### `IMathOperations` — Stateless Rekentool
+### `IMathOperations` — Stateless Math Tool
 
 ```idl
 interface IMathOperations : IDispatch
@@ -161,7 +161,7 @@ interface IMathOperations : IDispatch
 };
 ```
 
-**Intern:** Eenvoudige rekenkundige operaties. `Divide` controleert op deling door nul. Geen state, geen lock, geen observer. Dient als demonstratie-component en smoke-test voor de COM infra.
+**Internal:** Elementary arithmetic procedures. `Divide` probes combating zero-division. Devoid of state, sans lock, sans observer. Predominantly serves displaying a baseline component alongside acting as a smoke-test probing COM infrastructure.
 
 ---
 
@@ -175,7 +175,7 @@ interface ISharedValueCallback : IDispatch
 };
 ```
 
-**Intern:** Backward-compatible observer voor de `SharedValue` core. Client-classes subscriben via `ISharedValue::Subscribe()`. Notificaties worden **deadlock-free** afgeleverd: de observer-lijst wordt gekopieerd onder de lock, waarna de lock wordt vrijgegeven vóór de callbacks worden aangeroepen.
+**Internal:** Backwards compatible observer satisfying the `SharedValue` core. Client endpoints hop aboard engaging `ISharedValue::Subscribe()`. Notifying occurs **deadlock-free**: copying the observer list confined inside the lock, whereafter disabling the lock vastly precedes shooting the callbacks.
 
 ---
 
@@ -191,13 +191,13 @@ interface IEventCallback : IDispatch
         [in] BSTR newValue,
         [in] BSTR source,
         [in] BSTR timestamp,     // UTC ISO 8601
-        [in] LONG sequenceId     // Monotoon stijgend (atomic)
+        [in] LONG sequenceId     // Monotonically increasing (atomic)
     );
 };
 ```
 
 **Event types:**
-| Code | Naam | Wanneer |
+| Code | Name | When |
 |---|---|---|
 | 1 | `ValueSet` | `SharedValue::SetValue()` |
 | 2 | `ValueLocked` | `SharedValue::LockSharedValue()` |
@@ -208,13 +208,13 @@ interface IEventCallback : IDispatch
 | 13 | `DatasetCleared` | `DatasetProxy::Clear()` |
 | 14 | `StorageModeChanged` | `DatasetProxy::SetStorageMode()` |
 
-**Intern:** Twee bridge-klassen vertalen `SharedValueV2::MutationEvent` → COM `IEventCallback` parameters:
-- `SharedValueEventBridge` — koppelt de `SharedValue` EventBus aan clients.
-- `ComEventBridge` — koppelt de `DatasetStore` EventBus aan clients.
+**Internal:** Two bridging-classes orchestrate `SharedValueV2::MutationEvent` → COM `IEventCallback` morphs:
+- `SharedValueEventBridge` — fastens the `SharedValue` EventBus tracking clients.
+- `ComEventBridge` — tethers the `DatasetStore` EventBus catering clients.
 
 ---
 
-## EXE Lifecycle — Technische Deep Dive
+## EXE Lifecycle — Technical Deep Dive
 
 ### Entry Point (`dllmain.cpp`)
 
@@ -223,22 +223,22 @@ CATLProjectcomserverExeModule _AtlModule;
 
 extern "C" int WINAPI _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int nShowCmd)
 {
-    _AtlModule.Lock();    // Voorkom voortijdig afsluiten
+    _AtlModule.Lock();    // Prevent premature shutdown
     return _AtlModule.WinMain(nShowCmd);
 }
 ```
 
-`CAtlExeModuleT::WinMain()` doet het volgende:
-1. `RegisterClassObjects()` — registreert alle class factories bij de SCM.
-2. **Win32 message loop** — `GetMessage()` / `DispatchMessage()` loop die het proces in leven houdt.
-3. De loop eindigt wanneer `m_nLockCnt == 0` (alle locks vrijgegeven).
-4. `RevokeClassObjects()` — deregistreert de class factories.
+`CAtlExeModuleT::WinMain()` navigates the following:
+1. `RegisterClassObjects()` — logs all class factories checking into SCM.
+2. **Win32 message loop** — `GetMessage()` / `DispatchMessage()` wheel spinning preserving the process lifespan.
+3. The wheel halts whenever `m_nLockCnt == 0` (locks completely depleted).
+4. `RevokeClassObjects()` — unlists the class factories.
 
-### Waarom `Lock()` nodig is
+### Why `Lock()` is necessary
 
-Standaard ATL-gedrag: zodra de laatste client disconneert, daalt de lock count naar 0 en stopt de EXE. Dit is ongewenst voor een server die persistent state moet bewaren. `_AtlModule.Lock()` voegt een extra referentie toe die pas door `ShutdownServer()` wordt verwijderd.
+Native ATL doctrine: assuming the final client disconnects, the lock count plummets reaching 0 crashing the EXE. Such acts as poison for a central server obligated retaining persistent state. `_AtlModule.Lock()` affixes an extraneous reference resolving purely whenever `ShutdownServer()` sparks.
 
-### Module Declaratie (`dllmain.h`)
+### Module Declaration (`dllmain.h`)
 
 ```cpp
 class CATLProjectcomserverExeModule : public ATL::CAtlExeModuleT<CATLProjectcomserverExeModule>
@@ -250,13 +250,13 @@ public:
 };
 ```
 
-De `DECLARE_REGISTRY_APPID_RESOURCEID` macro koppelt de AppID GUID aan het `.rgs` bestand, waardoor `ATLProjectcomserver.exe /RegServer` automatisch alle registry entries schrijft.
+The `DECLARE_REGISTRY_APPID_RESOURCEID` parameter marries the AppID GUID hooking it tightly towards the `.rgs` sheet, ensuring `ATLProjectcomserver.exe /RegServer` dutifully drills away dropping all registry entries.
 
 ---
 
 ## Error Handling — `ComErrorHelper.h`
 
-Alle COM methoden in dit project gebruiken de `COM_METHOD_BODY` macro die C++ exceptions vertaalt naar COM-compatibele foutcodes:
+All COM methods populating this venture rely upon the `COM_METHOD_BODY` macro transforming C++ exceptions rendering them COM-compatible error markings:
 
 ```
 C++ Exception                       → HRESULT                  → Client
@@ -268,13 +268,13 @@ std::exception                      → E_FAIL                   → COMExceptio
 ... (unknown)                       → E_UNEXPECTED             → COMException
 ```
 
-Elke exception genereert ook een `IErrorInfo` via `AtlReportError()`, zodat clients (C#, VBScript) de foutbeschrijving kunnen uitlezen als human-readable tekst.
+Every single exception consecutively pushes an `IErrorInfo` calling `AtlReportError()`, empowering clients (C#, VBScript) scooping up the fault depiction typed plainly human-readable.
 
 ---
 
 ## Windows Registry — CLSIDs & ProgIDs
 
-Na `/RegServer` worden de volgende entries aangemaakt:
+Upon launching `/RegServer` the registry absorbs the subsequent entries:
 
 | ProgID | CLSID | Type |
 |---|---|---|
@@ -283,138 +283,138 @@ Na `/RegServer` worden de volgende entries aangemaakt:
 | `ATLProjectcomserverExe.MathOperations` | `{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}` | Multi-instance |
 
 **AppID:** `{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}`
-**TypeLib:** Zelfde GUID als AppID.
+**TypeLib:** Identical GUID aligning AppID.
 
-De registratie kan geverifieerd worden met:
+Registration is independently verifiable executing:
 ```powershell
 .\scripts\Invoke-ComDiagnostics.ps1
 ```
 
 ---
 
-## Bestandsoverzicht
+## Files Outline
 
 ### COM Interfaces & IDL
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.idl` | Interface Definition Language — definieert `IMathOperations`, `ISharedValue`, `ISharedValueCallback`, `IEventCallback`, `IDatasetProxy` en de TypeLib. Gecompileerd door MIDL. |
-| `ATLProjectcomserver_i.h / _i.c` | Door MIDL gegenereerde interface headers en GUID constanten (`CLSID_SharedValue`, `IID_IDatasetProxy`, etc.). |
-| `ATLProjectcomserver_p.c` | Door MIDL gegenereerde proxy/stub code — essentieel voor RPC marshaling. Bevat de NDR serialisatie-routines voor elk interface-parameter. |
-| `ATLProjectcomserver.tlh / .tli` | Door `#import` gegenereerde type library wrappers met smart pointers (`ISharedValuePtr`). Alleen gebruikt door `stop_server.cpp`. |
-| `dlldata.c` | Proxy/stub DLL registratie data (COM vereist dit voor custom marshaling). |
+| `ATLProjectcomserver.idl` | Interface Definition Language — declaring `IMathOperations`, `ISharedValue`, `ISharedValueCallback`, `IEventCallback`, `IDatasetProxy` alongside the TypeLib. Handled by MIDL. |
+| `ATLProjectcomserver_i.h / _i.c` | Interface footprints and GUID anchors generated directly via MIDL (`CLSID_SharedValue`, `IID_IDatasetProxy`, etc.). |
+| `ATLProjectcomserver_p.c` | MIDL generated proxy/stub footprints — critical executing RPC marshaling. Fields the NDR serializing engines targeting interface-parameters individually. |
+| `ATLProjectcomserver.tlh / .tli` | Improvised type library blankets generated calling `#import` throwing smart pointers (`ISharedValuePtr`). Solely leveraged running `stop_server.cpp`. |
+| `dlldata.c` | Proxy/stub DLL linking metrics (COM necessitates this spanning custom marshaling). |
 
-### COM Klasse-implementaties
-| Bestand | Beschrijving |
+### COM Class Implementations
+| File | Description |
 |---|---|
-| `SharedValue.h / .cpp` | `CSharedValue` — ATL wrapper rondom `SharedValueV2::SharedValue<CComVariant, LocalMutexPolicy>`. Singleton (`DECLARE_CLASSFACTORY_SINGLETON`). Bevat `SharedValueEventBridge` voor EventBus→COM vertaling. `ShutdownServer()` beëindigt het proces via `_AtlModule.Unlock()`. |
-| `DatasetProxy.h / .cpp` | `CDatasetProxy` — ATL wrapper rondom `SharedValueV2::DatasetStore<std::wstring>`. Bevat `ComEventBridge` voor dataset-events. `FetchPageKeys` bouwt een `CComSafeArray<VARIANT>`, `FetchPageData` bouwt een 2D `SAFEARRAY`. |
-| `MathOperations.h / .cpp` | `CMathOperations` — Stateless wiskundige bewerkingen. Geen afhankelijkheid op SharedValueV2. Threading model: `CComMultiThreadModel`. |
-| `SharedValueCallback.h / .cpp` | `CSharedValueCallback` — Ontvanger-interface. Clients implementeren deze interface, de server roept `OnValueChanged()` / `OnDateTimeChanged()` aan. |
-| `ComErrorHelper.h` | `COM_METHOD_BODY` macro — centraal punt voor exception → `HRESULT + IErrorInfo` vertaling. Vangt `SharedValueException`, `std::out_of_range`, `std::invalid_argument`, `std::exception`, en fallback `catch(...)`. |
+| `SharedValue.h / .cpp` | `CSharedValue` — ATL wrapper sealing `SharedValueV2::SharedValue<CComVariant, LocalMutexPolicy>`. Singleton (`DECLARE_CLASSFACTORY_SINGLETON`). Carries `SharedValueEventBridge` mitigating EventBus→COM conversion. `ShutdownServer()` vaporizes the process firing `_AtlModule.Unlock()`. |
+| `DatasetProxy.h / .cpp` | `CDatasetProxy` — ATL wrapper enclosing `SharedValueV2::DatasetStore<std::wstring>`. Anchors `ComEventBridge` covering dataset-events. `FetchPageKeys` stitches a `CComSafeArray<VARIANT>`, `FetchPageData` assembles a heavy 2D `SAFEARRAY`. |
+| `MathOperations.h / .cpp` | `CMathOperations` — Stateless mathematical processes. Holds zero dependency relying upon SharedValueV2. Threading blueprint: `CComMultiThreadModel`. |
+| `SharedValueCallback.h / .cpp` | `CSharedValueCallback` — Receiver-interface. Client nodes implement this outline, server sparks `OnValueChanged()` / `OnDateTimeChanged()`. |
+| `ComErrorHelper.h` | `COM_METHOD_BODY` wrapping blanket — overarching nexus bridging exception → `HRESULT + IErrorInfo` conversion. Snares `SharedValueException`, `std::out_of_range`, `std::invalid_argument`, `std::exception`, plus fallback `catch(...)`. |
 
 ### EXE Entry Point & Lifecycle
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `dllmain.cpp` | `_tWinMain()` entry point. Instantieert `CATLProjectcomserverExeModule` en start de Win32 message loop. `_AtlModule.Lock()` houdt het proces in leven totdat `ShutdownServer()` wordt aangeroepen. |
-| `dllmain.h` | Declaratie van `CATLProjectcomserverExeModule : public CAtlExeModuleT<...>`. Bevat `DECLARE_LIBID` en `DECLARE_REGISTRY_APPID_RESOURCEID`. |
+| `dllmain.cpp` | `_tWinMain()` boot sequence. Drops `CATLProjectcomserverExeModule` kicking off the Win32 message carousel. `_AtlModule.Lock()` clutches the process intact spanning until `ShutdownServer()` triggers. |
+| `dllmain.h` | Setup detailing `CATLProjectcomserverExeModule : public CAtlExeModuleT<...>`. Houses `DECLARE_LIBID` beside `DECLARE_REGISTRY_APPID_RESOURCEID`. |
 
 ### Shutdown Tools
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `stop_server.cpp` | C++ CLI tool die via `#import` en smart pointers (`ISharedValuePtr`) verbindt met de EXE server en `ShutdownServer()` aanroept. Gebruikt `CoInitializeEx(COINIT_APARTMENTTHREADED)`. |
-| `stop_server.vbs` | VBScript one-liner equivalent: `CreateObject("ATLProjectcomserverExe.SharedValue").ShutdownServer()`. |
+| `stop_server.cpp` | C++ CLI tool deploying `#import` paired bridging smart pointers (`ISharedValuePtr`) clamping onto the EXE server firing `ShutdownServer()`. Invokes `CoInitializeEx(COINIT_APARTMENTTHREADED)`. |
+| `stop_server.vbs` | VBScript one-liner identical executing: `CreateObject("ATLProjectcomserverExe.SharedValue").ShutdownServer()`. |
 
 ### ATL Infrastructure
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `pch.h / pch.cpp` | Precompiled header — trekt `<atlbase.h>`, `<atlcom.h>` en Windows headers in. |
-| `targetver.h` | Windows SDK versie targeting (`_WIN32_WINNT`). |
-| `resource.h` | Resource ID's: `IDR_ATLPROJECTCOMSERVER`, `IDR_SHAREDVALUE`, `IDR_DATASETPROXY`, `IDR_MATHOPERATIONS`. |
-| `ATLProjectcomserver.rc` | Windows resource bestand — embedt de TypeLib (`.tlb`) en versie-informatie. |
-| `ATLProjectcomserver.def` | Module definition file — exporteert `DllGetClassObject`, `DllCanUnloadNow`, etc. (gebruikt door de proxy/stub DLL). |
+| `pch.h / pch.cpp` | Precompiled header — hauls in `<atlbase.h>`, `<atlcom.h>` joined alongside Windows headers. |
+| `targetver.h` | Windows SDK version anchor points (`_WIN32_WINNT`). |
+| `resource.h` | Distinct Resource IDs: `IDR_ATLPROJECTCOMSERVER`, `IDR_SHAREDVALUE`, `IDR_DATASETPROXY`, `IDR_MATHOPERATIONS`. |
+| `ATLProjectcomserver.rc` | Windows resource sheet — bakes in the TypeLib (`.tlb`) combined flanking version tags. |
+| `ATLProjectcomserver.def` | Module definition manifest — projects `DllGetClassObject`, `DllCanUnloadNow`, etc. (sought handling the proxy/stub DLL). |
 
 ### Registry Scripts (`.rgs`)
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.rgs` | Registreert de AppID `{B0A0188F-...}` en het pad naar de EXE als `LocalServer32`. |
-| `SharedValue.rgs` | Registreert ProgID `ATLProjectcomserverExe.SharedValue` → CLSID `{A5B21149-...}`. |
-| `DatasetProxy.rgs` | Registreert ProgID `ATLProjectcomserverExe.DatasetProxy` → CLSID `{1D85075B-...}`. |
-| `MathOperations.rgs` | Registreert ProgID `ATLProjectcomserverExe.MathOperations` → CLSID `{1CE8C512-...}`. |
-| `SharedValueCallback.rgs` | Registreert ProgID `ATLProjectcomserverExe.SharedValueCallback` → CLSID `{6818DD57-...}`. |
+| `ATLProjectcomserver.rgs` | Plugs the AppID `{B0A0188F-...}` alongside the footprint driving the EXE named `LocalServer32`. |
+| `SharedValue.rgs` | Tethers ProgID `ATLProjectcomserverExe.SharedValue` → CLSID `{A5B21149-...}`. |
+| `DatasetProxy.rgs` | Tethers ProgID `ATLProjectcomserverExe.DatasetProxy` → CLSID `{1D85075B-...}`. |
+| `MathOperations.rgs` | Tethers ProgID `ATLProjectcomserverExe.MathOperations` → CLSID `{1CE8C512-...}`. |
+| `SharedValueCallback.rgs` | Tethers ProgID `ATLProjectcomserverExe.SharedValueCallback` → CLSID `{6818DD57-...}`. |
 
 ### Build & Solution
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.vcxproj` | MSVC project — `ConfigurationType=Application`, `SubSystem=Windows`. `AdditionalIncludeDirectories` bevat `$(SolutionDir)` voor SharedValueV2 headers. |
-| `ATLProjectcomserver.sln` | Standalone solution voor het bouwen van alleen de EXE. |
-| `.clangd` | Clangd LSP config — extra include pad naar SharedValueV2. |
-| `.gitignore` | Lokale ignores: `x64/`, `*.obj`, `*.exe`, `*.pdb`, etc. |
+| `ATLProjectcomserver.vcxproj` | MSVC blueprint — `ConfigurationType=Application`, `SubSystem=Windows`. `AdditionalIncludeDirectories` nests `$(SolutionDir)` covering SharedValueV2 headers. |
+| `ATLProjectcomserver.sln` | Dedicated isolated solution driving build constraints targeting exclusively the EXE. |
+| `.clangd` | Clangd LSP mapping — extra inclusion paths reaching SharedValueV2. |
+| `.gitignore` | Local cloaking: `x64/`, `*.obj`, `*.exe`, `*.pdb`, etc. |
 
 ### Subdirectories
-| Directory | Beschrijving |
+| Directory | Description |
 |---|---|
-| [`tests/`](tests/) | Cross-process integratietests — `Run-CrossProcessTests.ps1` + C# .NET 8. |
+| [`tests/`](tests/) | Cross-process integration sequences — `Run-CrossProcessTests.ps1` + C# .NET 8. |
 
 ---
 
-## Compilatie
+## Compilation
 
-### Via de centrale solution (aanbevolen)
+### Traversing the central solution (recommended)
 
 ```powershell
-# Initialiseer MSVC build-omgeving
+# Populate MSVC build environment variables
 . Invoke-BuildEnvironment.ps1 -Toolchain MSVC -Version "Enterprise 2022" -Architecture x64
 
-# Bouw alle projecten (Legacy DLL + EXE Server)
+# Blanket build wrapping overarching projects (Legacy DLL + EXE Server)
 msbuild ATLProjectcomserver.sln /p:Configuration=Debug /p:Platform=x64 -m
 ```
 
-### Via de standalone EXE solution
+### Traversing the standalone EXE solution
 
 ```powershell
 msbuild ATLProjectcomserverExe\ATLProjectcomserver.sln /p:Configuration=Debug /p:Platform=x64 -m
 ```
 
-De EXE wordt geproduceerd in `x64\Debug\ATLProjectcomserver.exe`.
+The resulting EXE anchors down natively at `x64\Debug\ATLProjectcomserver.exe`.
 
 ---
 
-## Registratie
+## Registration
 
 ```cmd
-:: Registreren (als Administrator)
+:: Executing Registration (engage as Administrator)
 x64\Debug\ATLProjectcomserver.exe /RegServer
 
-:: De-registreren
+:: Scrubbing (De-registering)
 x64\Debug\ATLProjectcomserver.exe /UnregServer
 
-:: Verifiëren
+:: Verification checks
 powershell .\scripts\Invoke-ComDiagnostics.ps1
 ```
 
 ---
 
-## Gebruik
+## Usage
 
-### VBScript — De EXE start automatisch on-demand
+### VBScript — The EXE leaps automatically on-demand
 
 ```vbscript
 Set sv = CreateObject("ATLProjectcomserverExe.SharedValue")
 sv.SetValue "Cross-process data!"
 WScript.Echo sv.GetValue()
 
-' DatasetProxy ophalen en bevragen
+' Grab DatasetProxy evaluating entries
 Set proxy = sv.GetValue()
-proxy.AddRow "key1", "waarde1"
+proxy.AddRow "key1", "value1"
 WScript.Echo proxy.GetRecordCount()    ' 1
 ```
 
-### C# .NET — Via late binding
+### C# .NET — Approaching via late binding
 
 ```csharp
 dynamic sv = Activator.CreateInstance(
     Type.GetTypeFromProgID("ATLProjectcomserverExe.SharedValue")!);
-sv.SetValue("Hallo vanuit C#!");
+sv.SetValue("Hello beamed from C#!");
 Console.WriteLine(sv.GetValue());
 
 // DatasetProxy
@@ -423,7 +423,7 @@ proxy.AddRow("server01", "status:online|cpu:45%");
 Console.WriteLine(proxy.GetRecordCount());  // 1
 ```
 
-### C++ — Via #import smart pointers
+### C++ — Reaching via #import smart pointers
 
 ```cpp
 #import "x64\\Release\\ATLProjectcomserver.exe" no_namespace named_guids
@@ -440,16 +440,16 @@ CoUninitialize();
 
 ## Graceful Shutdown
 
-De EXE server blijft draaien totdat expliciet afgesloten:
+The EXE server cycles endlessly maintaining uptime awaiting an explicit termination string:
 
 ```powershell
-# Via VBScript
+# Spanning VBScript
 cscript stop_server.vbs
 
-# Via gecompileerde C++ tool
+# Executing compiled C++ tool
 .\stop_server.exe
 
-# Via PowerShell one-liner
+# Engaging PowerShell standalone snippet
 $sv = New-Object -ComObject "ATLProjectcomserverExe.SharedValue"
 $sv.ShutdownServer()
 [System.Runtime.InteropServices.Marshal]::ReleaseComObject($sv) | Out-Null
@@ -457,24 +457,24 @@ $sv.ShutdownServer()
 
 ---
 
-## Testen
+## Testing
 
-Zie [`tests/README.md`](tests/) voor de volledige testdocumentatie.
+Visit [`tests/README_EN.md`](tests/README_EN.md) observing the expanded testing documentation.
 
 ```powershell
-# Geautomatiseerde cross-process suite (6 scenario's)
+# Automated cross-process barrage (6 sequences)
 .\tests\Run-CrossProcessTests.ps1
 
-# C# .NET 8 integratietests (14 tests)
+# C# .NET 8 integration testing barrage (14 sequence logic)
 cd tests\CSharpNet8Test && dotnet run
 ```
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [USAGE_EXAMPLES.md](USAGE_EXAMPLES.md) — Duidelijke C#, C++ en VBScript integratievoorbeelden van SharedValue en DatasetProxy.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Diepgaand technisch ontwerp en klassendiagrammen.
-- [INSTALL.md](INSTALL.md) — System requirements, registratie, build-instructies en WiX MSI configuratie.
-- [tests/README.md](tests/README.md) — Unit en Integratie testing details.
-- [../README.md](../README.md) — Overkoepelende project documentatie.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [USAGE_EXAMPLES_EN.md](USAGE_EXAMPLES_EN.md) — Clear integration examples mapping C#, Native C++, and VBScript hitting SharedValue & DatasetProxy components.
+- [ARCHITECTURE_EN.md](ARCHITECTURE_EN.md) — Comprehensive technical design layouts encompassing explicit class diagrams.
+- [INSTALL_EN.md](INSTALL_EN.md) — Base system thresholds, deployment steps, deep compiler instructions, and robust WiX Toolset dependencies.
+- [tests/README_EN.md](tests/README_EN.md) — Aggressive Unit validations alongside Integration testing matrices.
+- [../README_EN.md](../README_EN.md) — Governing overarching root structure documentation metrics.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Introductory overview guiding the SharedValueV2 C++20 engine.

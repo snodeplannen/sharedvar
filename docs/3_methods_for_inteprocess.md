@@ -1,69 +1,69 @@
 # Cross-Process Architecture Redesign
 
-De huidige `ATLProjectcomserver` is ontworpen als een **In-Process Server (.dll)**. Dit betekent dat het geheugen strikt geïsoleerd per proces is. Wanneer `cscript.exe` (VBScript) en `dotnet.exe` (C#) de COM-objecten aanroepen, laden ze beide onafhankelijk een kopie van de DLL in hun eigen geheugenruimtes (heaps).
+The current `ATLProjectcomserver` is designed as an **In-Process Server (.dll)**. This signifies that memory is strictly isolated per process. When `cscript.exe` (VBScript) and `dotnet.exe` (C#) invoke the COM objects, they both independently load a copy of the DLL into their respective memory spaces (heaps).
 
-Om echte data-sharing tussen gescheiden processen te realiseren, moeten we de proces-grens (`process boundary`) overbruggen.
+To achieve genuine data sharing between separate processes, we must bridge the process boundary.
 
 > [!WARNING]
 > **User Review Required**
-> Kies één van de onderstaande migratiepaden. Optie 2 is de ontwerpkundig meest logische tussenstap, aangezien Optie 1 het projecttype verandert en Optie 3 de C++ code significant complexer maakt.
+> Select one of the migration paths below. Option 2 represents the most logically sound architectural intermediate step, whereas Option 1 transforms the project type entirely and Option 3 significantly escalates the complexity of the C++ code.
 
 ---
 
-## Optie 1: Native Out-of-Process Server (ATL EXE)
+## Option 1: Native Out-of-Process Server (ATL EXE)
 
-We veranderen de output van het C++ project in Visual Studio van `.dll` naar `.exe` (`LocalServer32`). 
+We alter the output of the C++ project in Visual Studio from `.dll` to `.exe` (`LocalServer32`). 
 
-**Hoe het werkt:**
-Wanneer een programma `CreateObject("ATLProjectcomserver.SharedValue")` aanroept, start de Windows COM Service (`svchost.exe`) onze EXE op de achtergrond. De EXE host de C++ Core (de *SharedValueV2* singleton). Zowel het VBS-script als de C#-app communiceren met dat ene gecentraliseerde EXE-proces via RPC (Remote Procedure Call) marshaling.
+**How it operates:**
+When a program calls `CreateObject("ATLProjectcomserver.SharedValue")`, the Windows COM Service (`svchost.exe`) launches our EXE in the background. The EXE hosts the C++ Core (the *SharedValueV2* singleton). Both the VBS script and the C# application communicate with that single centralized EXE process via RPC (Remote Procedure Call) marshaling.
 
-* **Voors:** De standaard "Microsoft-aanbevolen" manier om een cross-process COM singleton te maken. Stabiel.
-* **Tegens:** Vereist een refactor van de C++ COM boilerplate (van `DllMain` naar `_tWinMain`, van `CAtlDllModuleT` naar `CAtlExeModuleT`). Trager dan in-process door RPC marshaling.
+* **Pros:** The standard "Microsoft-recommended" mechanism to instantiate a cross-process COM singleton. Highly stable.
+* **Cons:** Necessitates a refactor of the C++ COM boilerplate (from `DllMain` to `_tWinMain`, from `CAtlDllModuleT` to `CAtlExeModuleT`). Slower than in-process due to RPC marshaling.
 
-## Optie 2: Windows DLL Surrogate (`dllhost.exe`)
+## Option 2: Windows DLL Surrogate (`dllhost.exe`)
 
-We behouden de huidige C++ DLL, maar we definiëren een nieuwe `AppID` (Application ID) in het Windows Register, specifiek voor onze classes. We configureren dit `AppID` met een lege `DllSurrogate` string.
+We retain the current C++ DLL, but we delineate a new `AppID` (Application ID) within the Windows Registry, specific to our classes. We configure this `AppID` with an empty `DllSurrogate` string.
 
-**Hoe het werkt:**
-Wanneer C# of VBS de COM server oproept, merkt Windows de `DllSurrogate` tag op. In plaats van de DLL direct in het aanroepende proces (bijv. `cscript.exe`) te laden, start Windows `dllhost.exe` (COM Surrogate) op de achtergrond. De DLL wordt exclusief in dát surrogate process geladen. Meerdere clients worden door Windows doorverwezen naar diezelfde `dllhost.exe`.
+**How it operates:**
+When C# or VBS summons the COM server, Windows observes the `DllSurrogate` tag. Rather than loading the DLL directly into the calling process (e.g., `cscript.exe`), Windows initiates `dllhost.exe` (COM Surrogate) in the background. The DLL is exclusively loaded into that surrogate process. Multiple clients are then redirected by Windows to that identical `dllhost.exe`.
 
-* **Voors:** **GEEN ENKELE** C++ code-wijziging vereist. Alleen de `.rgs` (registry scripts) van het project hoeven te worden geüpdatet, gevolgd door een rebuild & registerronde.
-* **Tegens:** `dllhost.exe` is gecreëerd door Microsoft als een "lapmiddel" wrapper, de debugging errvaring kan lastiger zijn als er crashes gebeuren (aangezien `dllhost.exe` zal crashen in plaats van jouw eigen process).
+* **Pros:** Requires **NO** modifications to C++ code. Only the project's `.rgs` (registry scripts) must be updated, followed by a rebuild & registration cycle.
+* **Cons:** `dllhost.exe` was intended by Microsoft as a "band-aid" wrapper; the debugging experience may be more challenging if crashes occur (since `dllhost.exe` will crash instead of your custom process).
 
-## Optie 3: Windows Shared Memory (File Mapping)
+## Option 3: Windows Shared Memory (File Mapping)
 
-We behouden de DLL (voor supersnelle in-process RPC en nul COM overhead), maar we herschrijven de C++ `StorageEngine` in de core. Alles wat via `AddRow` wordt toegevoegd, wordt niet meer in een lokale C++ `std::map` gezet, maar naar een via `CreateFileMapping` gereserveerd gedeeld RAM-geheugenblok weggeschreven dat door meerdere processen tegelijk gelezen mag worden.
+We keep the DLL (for blisteringly fast in-process RPC and zero COM overhead), but we rewrite the C++ `StorageEngine` within the core. Everything appended via `AddRow` is no longer placed inside a local C++ `std::map`, but written out to a shared RAM memory block reserved via `CreateFileMapping` — allowing simultaneous access across multiple processes.
 
-* **Voors:** Ongeëvenaarde performance. Geen trage Windows RPC marshaling calls of IPC overhead.
-* **Tegens:** Extreem complex. C++ STL containers (zoals `std::string` of `std::map`) gebruiken default-allocators die niet werken in process-overschrijdend gedeeld geheugen. We moeten custom memory-allocators schrijven.
+* **Pros:** Unrivaled performance. Zero sluggish Windows RPC marshaling calls or IPC overhead.
+* **Cons:** Exceptionally complex. C++ STL containers (like `std::string` or `std::map`) utilize default allocators unsuitable for cross-process shared memory. We would have to author custom memory allocators.
 
 ---
 
-## Voorgesteld Aanvalsplan (Advies: Start met Optie 2)
+## Proposed Action Plan (Recommendation: Commence with Option 2)
 
-Als je akkoord bent met **Optie 2 (DllSurrogate)** om snel resultaat te boeken, zal ik het volgende doen:
+Should you approve of **Option 2 (DllSurrogate)** to deliver swift results, I shall execute the following:
 
 ### 1. Registry Scripts Updates
-Ik pas `DatasetProxy.rgs` en `SharedValue.rgs` aan.
+I will modify `DatasetProxy.rgs` and `SharedValue.rgs`.
 #### [MODIFY] `DatasetProxy.rgs`
-- Voeg in de registry tree onder `NoRemove CLSID` een `val AppID = s '{nieuw-gedeelde-appid-guid}'` toe.
-- Voeg onder `HKCR` een nieuwe root toe `NoRemove AppID { {nieuw-gedeelde-appid-guid} { val DllSurrogate = s '' } }`.
+- Insert a `val AppID = s '{new-shared-appid-guid}'` under the registry tree `NoRemove CLSID`.
+- Insert a new root `NoRemove AppID { {new-shared-appid-guid} { val DllSurrogate = s '' } }` under `HKCR`.
 
-### 2. Registry Opruimen
-Eerst voeren we het eerder gemaakte diagnostische script uit (of de unregister) om de *InprocServer32* configuraties veilig te veranderen. 
+### 2. Registry Cleanup
+Initially, we run the previously crafted diagnostic script (or the unregister command) to safely wipe the *InprocServer32* configurations. 
 
 ### 3. Build & Test Run
-We her-bouwen, registreren, en voeren de originele **Consumer/Producer tests** uit in verschillende terminalvensters. De *Proxy* call van de consumer zou dan data moeten krijgen!
+We rebuild, register, and execute the original **Consumer/Producer tests** across distinct terminal windows. The consumer's *Proxy* call should then successfully retrieve data!
 
 ## Open Questions
-- Welke van de drie opties geniet jouw voorkeur voor dit project?
-- Is prestatie (lagere latency via `in-process` en `shared memory`) belangrijker dan architecturale netheid (COM EXE / RPC)?
+- Which of the three options do you prefer for this project?
+- Does performance (lower latency via `in-process` and `shared memory`) outweigh architectural cleanliness (COM EXE / RPC)?
 
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [README.md](README.md) — Startpagina voor algemene theorie en project onderzoek.
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README_EN.md](README_EN.md) — Starting page for general theory and project research.
+- [README_EN.md](../README_EN.md) — Main documentation and starting point of the entire project.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document for the entire COM Server project.
+- [README_EN.md](../ATLProjectcomserverExe/README_EN.md) — User guide and overview of the EXE COM Server variant.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.

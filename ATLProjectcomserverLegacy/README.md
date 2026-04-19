@@ -1,93 +1,93 @@
 # ATLProjectcomserverLegacy — In-Process DLL COM Server
 
-Dit is de **oorspronkelijke** ATL COM Server implementatie, gebouwd als een **In-Process DLL** (`InprocServer32`). De DLL wordt direct in het geheugen van het aanroepende proces geladen via `regsvr32`.
+This represents the **original** ATL COM Server implementation, structured natively as an **In-Process DLL** (`InprocServer32`). The DLL loads directly into the memory footprint mapping the calling process via `regsvr32`.
 
-> **Let op:** Deze variant deelt geen geheugen tussen processen. Voor cross-process data-sharing is de [EXE Server](../ATLProjectcomserverExe/) de aanbevolen oplossing.
+> **Note:** This specific variant prevents sharing memory spanning processes securely. Targeting robust cross-process data-sharing, the [EXE Server](../ATLProjectcomserverExe/) branch serves as the recommended overarching solution.
 
-## Rol binnen het project
+## Role within the project
 
-Deze legacy server dient als:
-- **Referentie-implementatie** van de originele InprocServer32 architectuur.
-- **Lokale test-backend** voor scenario's waar snelheid boven cross-process isolatie gaat.
-- **Basis** waaruit de EXE Server variant (`ATLProjectcomserverExe`) is gemigreerd.
+This legacy server serves explicitly as:
+- **Reference implementation** tracking the original InprocServer32 architecture identically.
+- **Local testing backend** addressing scenarios prioritizing execution speed overshadowing cross-process isolation completely.
+- **Foundational baseline** from which the EXE Server variant (`ATLProjectcomserverExe`) was securely migrated.
 
-## Bestandsoverzicht
+## File Overview
 
 ### COM Interfaces & IDL
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.idl` | Interface Definition Language — definieert alle COM interfaces (`IMathOperations`, `ISharedValue`, `IDatasetProxy`, `ISharedValueCallback`) en hun GUIDs. |
-| `ATLProjectcomserver_i.h` | Door MIDL gegenereerde header met interface declaraties en CLSIDs. |
-| `ATLProjectcomserver_i.c` | Door MIDL gegenereerde GUIDs (IIDs en CLSIDs). |
-| `ATLProjectcomserver_p.c` | Door MIDL gegenereerde proxy/stub code voor marshaling. |
-| `dlldata.c` | Proxy/stub DLL data, gegenereerd door MIDL. |
+| `ATLProjectcomserver.idl` | Interface Definition Language — formally defining all sweeping COM interfaces (`IMathOperations`, `ISharedValue`, `IDatasetProxy`, `ISharedValueCallback`) tracking respective GUIDs. |
+| `ATLProjectcomserver_i.h` | Generated directly via MIDL embedding interface declarations alongside corresponding CLSIDs. |
+| `ATLProjectcomserver_i.c` | Generated natively via MIDL encompassing GUIDs (IIDs and CLSIDs perfectly). |
+| `ATLProjectcomserver_p.c` | Generated smoothly via MIDL tracking proxy/stub codegen targeting marshaling. |
+| `dlldata.c` | Proxy/stub DLL routing data securely generated via MIDL logic loops. |
 
-### COM Klasse-implementaties
-| Bestand | Beschrijving |
+### COM Class Implementations
+| File | Description |
 |---|---|
-| `SharedValue.h / .cpp` | Implementatie van `ISharedValue`. Wikkelt de C++20 `SharedValueV2::SharedValue` core in een ATL COM object. |
-| `DatasetProxy.h / .cpp` | Implementatie van `IDatasetProxy`. Een pagineerbare key-value store met `AddRow`, `GetRowData`, `FetchPageKeys`, etc. |
-| `MathOperations.h / .cpp` | Implementatie van `IMathOperations`. Stateless wiskundige bewerkingen. |
-| `SharedValueCallback.h / .cpp` | Implementatie van `ISharedValueCallback`. Observer proxy voor event-notificaties. |
-| `ComErrorHelper.h` | `COM_METHOD_BODY` macro die `SharedValueV2` exceptions vertaalt naar `HRESULT` + `IErrorInfo`. |
+| `SharedValue.h / .cpp` | Implementation anchoring `ISharedValue`. Reliably wraps the underlying C++20 `SharedValueV2::SharedValue` core seamlessly within an ATL COM object securely. |
+| `DatasetProxy.h / .cpp` | Implementation centering `IDatasetProxy`. Operating deeply as a pageable key-value store leveraging `AddRow`, `GetRowData`, `FetchPageKeys`, strings natively. |
+| `MathOperations.h / .cpp` | Implementation defining `IMathOperations`. Providing strictly stateless core mathematical computations naturally. |
+| `SharedValueCallback.h / .cpp` | Implementation targeting `ISharedValueCallback`. Operating distinctly as an observer proxy pushing event-notifications securely. |
+| `ComErrorHelper.h` | Defines the `COM_METHOD_BODY` macro inherently translating `SharedValueV2` exceptions directly onto `HRESULT` + `IErrorInfo` COM cascades completely seamlessly. |
 
 ### ATL Infrastructure
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `dllmain.cpp / .h` | DLL entry point met `CAtlDllModuleT` ATL module. |
-| `pch.h / pch.cpp` | Precompiled header (ATL base includes). |
-| `targetver.h` | Windows SDK versie targeting. |
-| `Resource.h` | Resource ID definities. |
-| `ATLProjectcomserver.rc` | Windows resource bestand (versie-info, type library). |
-| `ATLProjectcomserver.def` | Module definition file voor DLL exports (`DllCanUnloadNow`, `DllGetClassObject`, etc.). |
+| `dllmain.cpp / .h` | Outlines the DLL entry point routing bridging `CAtlDllModuleT` ATL module configurations. |
+| `pch.h / pch.cpp` | Tracks precompiled header mapping (targeting standard ATL base includes identically). |
+| `targetver.h` | Enforces specific Windows SDK version targeting. |
+| `Resource.h` | Defines embedded resource ID configurations distinctly. |
+| `ATLProjectcomserver.rc` | Tracks Windows resource mapping file constraints (parsing version-info coupled referencing type libraries internally). |
+| `ATLProjectcomserver.def` | Identifies module definition boundaries referencing explicit DLL exports natively (`DllCanUnloadNow`, `DllGetClassObject`, logic mappings stringing bounds identically). |
 
 ### Registry Scripts
-| Bestand | Beschrijving |
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.rgs` | Registratie van de AppID en TypeLib. |
-| `SharedValue.rgs` | CLSID en ProgID registratie voor `SharedValue`. |
-| `DatasetProxy.rgs` | CLSID en ProgID registratie voor `DatasetProxy`. |
-| `MathOperations.rgs` | CLSID en ProgID registratie voor `MathOperations`. |
-| `SharedValueCallback.rgs` | CLSID en ProgID registratie voor `SharedValueCallback`. |
+| `ATLProjectcomserver.rgs` | Resolves core registration tying AppID alongside targeted TypeLib boundaries smoothly. |
+| `SharedValue.rgs` | Defines distinct CLSID tracking coupled parsing ProgID registration targeting explicitly `SharedValue` logic paths. |
+| `DatasetProxy.rgs` | Enforces registration paths linking CLSID + ProgID encompassing explicitly `DatasetProxy` strings cleanly. |
+| `MathOperations.rgs` | Sweeps registering mapping CLSID + ProgID referencing entirely `MathOperations`. |
+| `SharedValueCallback.rgs` | Secures identifying matching arrays registering CLSID + ProgID isolating exactly `SharedValueCallback`. |
 
-### Build
-| Bestand | Beschrijving |
+### Build Constraints
+| File | Description |
 |---|---|
-| `ATLProjectcomserver.vcxproj` | Visual Studio C++ projectbestand. |
-| `ATLProjectcomserver.vcxproj.user` | Gebruikersspecifieke projectinstellingen. |
+| `ATLProjectcomserver.vcxproj` | Tracks the underlying native Visual Studio C++ project file arrays smoothly. |
+| `ATLProjectcomserver.vcxproj.user` | Retains user-specific localized project tuning constraints cleanly. |
 
-## Compilatie
+## Compilation Sequence
 
 ```powershell
-# Vanuit de project root:
+# Executing natively bypassing boundaries targeting the core project root:
 msbuild ATLProjectcomserver.sln /p:Configuration=Debug /p:Platform=x64 -m
 ```
 
-De DLL wordt geproduceerd in `x64\Debug\ATLProjectcomserver.dll`.
+The underlying DLL compiles gracefully outputting seamlessly into `x64\Debug\ATLProjectcomserver.dll`.
 
-## Registratie
+## Registration Metrics
 
 ```cmd
-:: Registreren (als Administrator)
+:: Execution routines enforcing registration hooks (Executed explicitly operating as Administrator)
 regsvr32 x64\Debug\ATLProjectcomserver.dll
 
-:: De-registreren
+:: Execution routines revoking overriding hooks smoothly
 regsvr32 /u x64\Debug\ATLProjectcomserver.dll
 ```
 
-## Gebruik
+## Usage Implementations
 
 ```vbscript
-' VBScript voorbeeld
+' Operating basic legacy VBScript examples efficiently
 Set sv = CreateObject("ATLProjectcomserver.SharedValue")
-sv.SetValue "Hallo vanuit VBScript!"
+sv.SetValue "Operating reliably directly originating spanning VBScript interfaces natively!"
 WScript.Echo sv.GetValue()
 ```
 
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../ATLProjectcomserverExe/README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README_EN.md](../README_EN.md) — Main overarching documentation routing starting endpoints mapping the sprawling encompassing project logic.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Fundamental tracking tracking logic defining the overarching holistic COM Server project explicitly.
+- [README_EN.md](../ATLProjectcomserverExe/README_EN.md) — Dedicated user guide bounding arrays tracking the EXE COM Server explicit variant distinctly.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Definitive introduction sweeps bridging explicitly mapping the comprehensive SharedValueV2 C++20 engine operations securely.

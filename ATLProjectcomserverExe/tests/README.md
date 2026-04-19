@@ -3,31 +3,31 @@
 > **COM Server Variant:** **Out-of-Process EXE Server** (`ATLProjectcomserver.exe`)
 > ProgID prefix: `ATLProjectcomserverExe.*`
 
-Integratietests voor de **productie EXE server**. In tegenstelling tot de Legacy DLL tests is de server hier een **zelfstandig Windows-proces** (`ATLProjectcomserver.exe`) dat automatisch door het Windows COM subsystem wordt gestart zodra een client `CreateObject("ATLProjectcomserverExe.SharedValue")` aanroept.
+Integration tests scrutinizing the **production EXE server**. Unlike the Legacy DLL tests, the server here stages an **independent Windows process** (`ATLProjectcomserver.exe`) propelled automatically via the Windows COM subsystem as soon as a client triggers `CreateObject("ATLProjectcomserverExe.SharedValue")`.
 
 > [!IMPORTANT]
-> De EXE server is de **aanbevolen architectuur voor cross-process data sharing**. Alle clients — VBScript, C#, Python — communiceren met dezelfde serverinstantie via RPC-marshaling over een LRPC Named Pipe.
+> The EXE server acts as the **recommended architecture achieving cross-process data sharing**. All respective clients — VBScript, C#, Python — universally communicate targeting identical server instances bridging through RPC marshaling mapping an LRPC Named Pipe.
 
 ---
 
-## Vereisten
+## Requirements
 
-1. De EXE server moet **geregistreerd** zijn als Administrator:
+1. The EXE server mandates being **registered** executing as Administrator:
    ```cmd
    x64\Debug\ATLProjectcomserver.exe /RegServer
    ```
-2. **Windows 10/11 x64** (LRPC Named Pipe transport).
-3. .NET 8 SDK (alleen voor `CSharpNet8Test`).
-4. `cscript.exe` aanwezig op het systeem (standaard op Windows).
+2. **Windows 10/11 x64** (LRPC Named Pipe transport backbone).
+3. .NET 8 SDK (exclusively powering `CSharpNet8Test`).
+4. `cscript.exe` present upon the host (intrinsic regarding Windows).
 
 ---
 
-## Directorystructuur
+## Directory layout
 
 ```
 tests/
-├── Run-CrossProcessTests.ps1    # PowerShell integratietest suite (5 scenario's)
-└── CSharpNet8Test/              # C# .NET 8 integratietests
+├── Run-CrossProcessTests.ps1    # PowerShell integration test barrage (5 variations)
+└── CSharpNet8Test/              # C# .NET 8 integration sequences
     ├── Program.cs
     └── CSharpNet8Test.csproj
 ```
@@ -36,113 +36,113 @@ tests/
 
 ## `Run-CrossProcessTests.ps1` — PowerShell Cross-Process Suite
 
-**Wanneer gebruiken:** Volledige end-to-end verificatie van de EXE server. Elke test-scenario spint een **apart `cscript.exe` proces** op dat verbindt als client — dit is échte cross-process communicatie.
+**When to employ:** Comprehensive end-to-end probing testing the EXE server. Each separate scenario boots an **isolated `cscript.exe` process** hooking up acting as client — guaranteeing tangible cross-process communication.
 
-**Draaien:**
+**Executing:**
 ```powershell
 .\tests\Run-CrossProcessTests.ps1
 ```
 
-### Scenario 1 — Automatisch Opstarten
+### Scenario 1 — Automatic Orchestration
 
-**Wat wordt getest:** Windows COM SCM start de EXE server automatisch als geen instantie actief is.
+**What gets verified:** Windows COM SCM springs the EXE server autonomously when discovering zero active instances running.
 
-**Hoe het werkt:** De eerste `CreateObject("ATLProjectcomserverExe.SharedValue")` aanroep activeert de SCM, die `ATLProjectcomserver.exe` opstart op de achtergrond. De client krijgt transparant een proxy-pointer terug.
+**Mechanics:** The inaugural `CreateObject("ATLProjectcomserverExe.SharedValue")` triggers the SCM, spinning up `ATLProjectcomserver.exe` looming in the background. The client retrieves a proxy-pointer transparently.
 
 ---
 
 ### Scenario 2 — String Producer
 
-**Wat wordt getest:** Een afgesloten producer-proces laat data achter in de server.
+**What gets verified:** An abruptly terminated producer-process safely strands data secured natively inside the server.
 
-**Hoe het werkt:**
-1. Een inline VBScript schrijft `"Boodschap vanuit afgesloten Producer-proces!"` via `SetValue`.
-2. Het `cscript.exe` script eindigt en sluit volledig af.
-3. De EXE server behoudt de data in zijn singleton `CSharedValue` instantie.
+**Mechanics:**
+1. A scripted inline VBScript pushes `"Message from a terminated Producer-process!"` firing `SetValue`.
+2. The `cscript.exe` execution resolves crashing/closing thoroughly.
+3. The EXE server dutifully shelters the data captured tightly mapped to its singleton `CSharedValue` layer.
 
-**Bewijs cross-process:** De producer is volledig gestopt — toch blijft de data in de server bewaard.
+**Proof of cross-process logic:** The producer evaporated entirely — nevertheless data undeniably survives encapsulated internally mapping the server.
 
 ---
 
 ### Scenario 3 — String Consumer
 
-**Wat wordt getest:** Een nieuw consumer-proces leest data die door een eerder gestopt proces was geschreven.
+**What gets verified:** A freshly spun consumer-process pulls data successfully previously logged via a ceased producer.
 
-**Hoe het werkt:**
-1. Een nieuw `cscript.exe` script verbindt via `CreateObject`.
-2. Roept `GetValue()` aan — de server geeft de eerder opgeslagen string terug.
-3. Script eindigt.
+**Mechanics:**
+1. A fresh `cscript.exe` iteration connects firing `CreateObject`.
+2. Calls upon `GetValue()` — the server dishes out the formerly deposited string.
+3. Script concludes.
 
-**Validatiecriterium:** De consumer ziet exact de string die de producer uit scenario 2 schreef.
+**Testing threshold:** The consumer confronts the precise verbatim string mirroring everything the producer stashed away during scenario 2.
 
 ---
 
-### Scenario 4 — DatasetProxy Producer (complexe data)
+### Scenario 4 — DatasetProxy Producer (complex objects)
 
-**Wat wordt getest:** Schrijven van een `DatasetProxy` met meerdere rijen naar de server vanuit een geïsoleerd proces.
+**What gets verified:** Shoveling a hefty `DatasetProxy` encasing multiple sequences over to the server driven from an isolated client endpoint.
 
-**Hoe het werkt:**
-1. Producer maakt een `DatasetProxy` aan (`sv.GetValue()` retourneert de server-side proxy).
-2. Voegt 2 rijen toe: `SERVER-01` en `SERVER-02` met statusdata.
-3. Producer sluit af.
+**Mechanics:**
+1. Producer drops a `DatasetProxy` (calling `sv.GetValue()` hauling the server-side proxy).
+2. Tacks on 2 rows: `SERVER-01` and `SERVER-02` bundling status footprints.
+3. Producer unloads closing smoothly.
 
 > [!NOTE]
-> De `DatasetProxy` is **server-side geïnstantieerd** (in `CSharedValue::FinalConstruct`). Clients krijgen een RPC-reference — de data leeft in de server, niet in het client-proces.
+> The `DatasetProxy` inherently resides **server-side instanced** (nestled in `CSharedValue::FinalConstruct`). Clients intercept just an RPC-reference — the native data perpetually occupies the server context, zeroing outside traversing into client territories.
 
 ---
 
-### Scenario 5 — DatasetProxy Consumer (COM marshaling)
+### Scenario 5 — DatasetProxy Consumer (COM marshaling proxying)
 
-**Wat wordt getest:** Lezen van dataset rijen via COM marshaling vanuit een separaat consumer-proces.
+**What gets verified:** Pulling dataset records executing COM marshaling guided remotely outward a severed consumer sequence.
 
-**Hoe het werkt:**
-1. Consumer haalt de `DatasetProxy` op via `sv.GetValue()`.
-2. Leest `GetRecordCount()`.
-3. Pagineert keys met `FetchPageKeys(0, 100)` — dit retourneert een `SAFEARRAY` die VBScript als Array behandelt.
-4. Leest per key de data op met `GetRowData(key)`.
+**Mechanics:**
+1. Consumer hauls the `DatasetProxy` hooking `sv.GetValue()`.
+2. Gathers `GetRecordCount()`.
+3. Cycles keys pulling `FetchPageKeys(0, 100)` — churning a bulk `SAFEARRAY` translating effortlessly onto VBScript resembling ordinary Arrays.
+4. Peels data open per key cycling `GetRowData(key)`.
 
-**Waarom dit technisch uitdagend is:** De `SAFEARRAY` moet correct gemarshald worden over de LRPC-grens. Dit test de proxy/stub code gegenereerd door MIDL.
-
----
-
-### Scenario 6 — Graceful Shutdown
-
-**Wat wordt getest:** De server sluit netjes af via het `ShutdownServer()` commando.
-
-**Hoe het werkt:**
-1. Controleert of `ATLProjectcomserver.exe` actief is (`Get-Process`).
-2. Een VBScript client roept `sv.ShutdownServer()` aan.
-3. De server voert intern uit: clear DatasetProxy reference → `_AtlModule.Unlock()` → message loop eindigt → proces exit.
-4. Script valideert dat het server-process niet meer bestaat.
-
-**Geslaagd:**
-```
-SUCCES: EXE server is naadloos gesloten.
-```
-
-**Gefaald:**
-```
-FAIL: EXE server draait nog.
-```
+**Why this poses serious hurdles technically:** The `SAFEARRAY` demands immaculate marshaling crossing the turbulent LRPC barriers. Hereby severely scrutinizing the proxy/stub engine assembled via MIDL.
 
 ---
 
-## `CSharpNet8Test/` — C# .NET 8 Integratietests
+### Scenario 6 — Graceful Shutdown Checks
 
-Zie [`CSharpNet8Test/README.md`](CSharpNet8Test/) voor de volledige beschrijving.
+**What gets verified:** Ensuring the overarching server collapses gracefully strictly abiding the `ShutdownServer()` mandate.
 
-**Samenvatting:** Dezelfde 5 testcategorieën als de Legacy DLL variant, maar dan gericht op de EXE server (`ATLProjectcomserverExe.DatasetProxy`). De aanroepen gaan via RPC-marshaling in plaats van directe in-process calls.
+**Mechanics:**
+1. Scrutinizes verifying `ATLProjectcomserver.exe` actually hums actively (`Get-Process`).
+2. A generic VBScript jumps executing `sv.ShutdownServer()`.
+3. The server cycles its internal routine: scrubbing DatasetProxy references → `_AtlModule.Unlock()` → arresting message looping patterns → process exiting safely.
+4. Final script sweep ensuring that precise server-sequence ceased existing entirely.
 
-**Draaien:**
+**Passing:**
+```
+SUCCESS: EXE server seamlessly concluded.
+```
+
+**Failing:**
+```
+FAIL: EXE server persists actively spanning process grids.
+```
+
+---
+
+## `CSharpNet8Test/` — C# .NET 8 Integration Sequences
+
+Explore [`CSharpNet8Test/README_EN.md`](CSharpNet8Test/README_EN.md) targeting an encyclopedic description natively.
+
+**Summary digest:** Broadly traversing identical 5 test branches mimicking the Legacy DLL footprint, however purely angled navigating the EXE server (`ATLProjectcomserverExe.DatasetProxy`). Invoking logic inherently rides RPC-marshaling avoiding in-process direct hops.
+
+**Executing:**
 ```powershell
 cd tests\CSharpNet8Test
 dotnet run
 ```
 
 
-## Gerelateerde Documentatie
+## Related Documentation
 
-- [README.md](../../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [README.md](../../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README_EN.md](../../README_EN.md) — Main documentation and starting point of the entire project.
+- [ARCHITECTURE_EN.md](../../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
+- [README_EN.md](../README_EN.md) — User guide and overview of the EXE COM Server variant.
+- [README_EN.md](../../SharedValueV2/README_EN.md) — Introductory overview guiding the SharedValueV2 C++20 engine.

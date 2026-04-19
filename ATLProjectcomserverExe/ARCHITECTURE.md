@@ -1,451 +1,192 @@
-# Technische Architectuur: ATLProjectcomserverExe
+﻿# Technical Architecture: ATLProjectcomserverExe
 
-## Inhoudsopgave
+## Table of Contents
 
-1. [Systeemoverzicht](#1-systeemoverzicht)
-2. [Lagenarchitectuur](#2-lagenarchitectuur)
-3. [COM Fundamentals](#3-com-fundamentals)
-4. [ATL Framework Internals](#4-atl-framework-internals)
-5. [EXE Server Lifecycle](#5-exe-server-lifecycle)
-6. [COM Object Model](#6-com-object-model)
-7. [RPC Marshaling & Proxy/Stub](#7-rpc-marshaling--proxystub)
-8. [Singleton Architectuur](#8-singleton-architectuur)
-9. [Observer & Event Architectuur](#9-observer--event-architectuur)
+1. [System Overview](#1-system-overview)
+2. [Layer Architecture](#2-layer-architecture)
+3. [COM Server Lifecycle](#3-com-server-lifecycle)
+4. [Component Model](#4-component-model)
+5. [SharedValueV2 — The C++ Engine](#5-sharedvaluev2--the-c-engine)
+6. [COM-to-C++ Bridge Layer](#6-com-to-c-bridge-layer)
+7. [Cross-Process Communication (RPC Marshaling)](#7-cross-process-communication-rpc-marshaling)
+8. [Observer & Event Architecture](#8-observer--event-architecture)
+9. [Thread-Safety & Synchronization](#9-thread-safety--synchronization)
 10. [Error Handling Pipeline](#10-error-handling-pipeline)
-11. [Type Conversie — COM ↔ C++](#11-type-conversie--com--c)
-12. [Client Interop Strategieën](#12-client-interop-strategieën)
-13. [SharedValueV2 Engine Integration](#13-sharedvaluev2-engine-integration)
-14. [Windows Registry Model](#14-windows-registry-model)
-15. [Design Patterns Samenvatting](#15-design-patterns-samenvatting)
+11. [.NET Interop & Late Binding](#11-net-interop--late-binding)
+12. [Singleton & Lifetime Management](#12-singleton--lifetime-management)
+13. [Design Patterns Overview](#13-design-patterns-overview)
 
 ---
 
-## 1. Systeemoverzicht
+## 1. System Overview
 
-De ATLProjectcomserverExe is een **Out-of-Process COM Server** (LocalServer32) die als een zelfstandig Windows-proces draait. Clients communiceren via **LRPC** (Lightweight Remote Procedure Call) over Named Pipes — dezelfde techniek als DCOM, maar lokaal.
+The project implements an **Out-of-Process COM Server** (EXE, `LocalServer32`) acting as a central singleton process for cross-process data sharing on Windows. Multiple independent clients communicate simultaneously with the same server via Windows RPC marshaling.
 
 ```mermaid
 graph TB
-    subgraph Clients["Client Processen (elk eigen geheugenruimte)"]
-        VBS["cscript.exe<br/>VBScript"]
-        CS["dotnet.exe<br/>C# .NET 8"]
-        CPP["stop_server.exe<br/>C++ CLI"]
-        PY["python.exe<br/>win32com"]
+    subgraph Clients["Client Processes"]
+        VBS["VBScript<br/>(cscript.exe)"]
+        CS["C# .NET 8<br/>(dotnet.exe)"]
+        CPP["C++ Tool<br/>(stop_server.exe)"]
+        PY["Python<br/>(python.exe)"]
     end
 
-    subgraph Windows["Windows COM Infrastructure"]
-        SCM["Service Control Manager<br/>(SCM / rpcss.exe)"]
-        OA["OLE Automation<br/>(oleaut32.dll)"]
-        LRPC["LRPC Transport<br/>(Named Pipe)"]
+    subgraph RPC["Windows COM Runtime"]
+        SCM["Service Control<br/>Manager (SCM)"]
+        PROXY["Proxy/Stub<br/>Marshaling"]
     end
 
-    subgraph Server["ATLProjectcomserver.exe (één proces)"]
-        MODULE["CAtlExeModuleT<br/>(message loop)"]
-        
-        subgraph Objects["COM Objecten"]
-            SV["CSharedValue<br/><i>Singleton</i>"]
-            DP["CDatasetProxy<br/><i>Server-owned</i>"]
-            MO["CMathOperations<br/><i>Stateless</i>"]
-        end
-
-        subgraph Engine["SharedValueV2 C++20 Core"]
-            SVC["SharedValue&lt;CComVariant&gt;"]
-            DSC["DatasetStore&lt;wstring&gt;"]
-            EB["EventBus"]
-        end
+    subgraph Server["ATLProjectcomserverExe.exe"]
+        ATL["ATL COM Module<br/>(CAtlExeModuleT)"]
+        SV["CSharedValue<br/>(Singleton)"]
+        DP["CDatasetProxy"]
+        MO["CMathOperations"]
     end
 
-    VBS -->|"CreateObject(ProgID)"| SCM
-    CS -->|"Activator.CreateInstance"| SCM
-    CPP -->|"CoCreateInstance(CLSID)"| SCM
-    PY -->|"Dispatch(ProgID)"| SCM
+    subgraph Engine["SharedValueV2 (C++20 Core)"]
+        SVCore["SharedValue&lt;T, Policy&gt;"]
+        DS["DatasetStore&lt;T&gt;"]
+        EB["EventBus&lt;Policy&gt;"]
+        LP["LockPolicies"]
+    end
 
-    SCM -->|"Start EXE als nodig"| MODULE
-    SCM <-->|"LRPC over Named Pipe"| LRPC
-    LRPC <-->|"NDR marshaled calls"| MODULE
+    VBS -->|CreateObject| SCM
+    CS -->|Activator.CreateInstance| SCM
+    CPP -->|CoCreateInstance| SCM
+    PY -->|win32com.client| SCM
 
-    MODULE --> SV
-    MODULE --> DP
-    MODULE --> MO
+    SCM -->|Start EXE / Route RPC| PROXY
+    PROXY <-->|LRPC Channel| ATL
 
-    SV --> SVC
-    DP --> DSC
-    SVC --> EB
-    DSC --> EB
+    ATL --> SV
+    ATL --> DP
+    ATL --> MO
 
-    style Clients fill:#3498db,color:#fff
-    style Windows fill:#9b59b6,color:#fff
-    style Server fill:#2c3e50,color:#fff
-    style Engine fill:#27ae60,color:#fff
+    SV -->|delegates| SVCore
+    DP -->|delegates| DS
+    SVCore --> EB
+    DS --> EB
+    SVCore --> LP
 ```
 
 ---
 
-## 2. Lagenarchitectuur
+## 2. Layer Architecture
+
+The system possesses four distinctly separated layers. Each layer has a clear responsibility and communicates exclusively with the directly adjacent layer.
 
 ```mermaid
-graph TD
-    subgraph L1["Laag 1 — Client"]
-        direction LR
-        L1A["VBScript<br/>CreateObject()"]
-        L1B["C# .NET<br/>Activator / dynamic"]
-        L1C["C++<br/>CoCreateInstance"]
+graph LR
+    subgraph L1["Layer 1: Client Applications"]
+        direction TB
+        C1["VBScript"]
+        C2["C# .NET"]
+        C3["Python"]
+        C4["C++"]
     end
 
-    subgraph L2["Laag 2 — COM Transport"]
-        direction LR
-        L2A["IDispatch vtable"]
-        L2B["Proxy/Stub DLL"]
-        L2C["LRPC Named Pipe"]
-        L2D["NDR Serialisatie"]
+    subgraph L2["Layer 2: COM/RPC Transport"]
+        direction TB
+        IDL["IDL Interfaces<br/>(ISharedValue, IDatasetProxy)"]
+        MARSH["Proxy/Stub<br/>Marshaling"]
+        REG["Windows Registry<br/>(CLSID, ProgID, AppID)"]
     end
 
-    subgraph L3["Laag 3 — ATL COM Wrapper"]
-        direction LR
-        L3A["CSharedValue<br/>CDatasetProxy<br/>CMathOperations"]
-        L3B["ComErrorHelper<br/>Exception→HRESULT"]
-        L3C["EventBridge<br/>C++→COM"]
+    subgraph L3["Layer 3: ATL COM Wrapper"]
+        direction TB
+        CSV["CSharedValue"]
+        CDP["CDatasetProxy"]
+        BRIDGE["EventBridge<br/>(COM ↔ C++)"]
+        ERR["ComErrorHelper<br/>(Exception → HRESULT)"]
     end
 
-    subgraph L4["Laag 4 — C++20 Engine"]
-        direction LR
-        L4A["SharedValue&lt;T,P&gt;"]
-        L4B["DatasetStore&lt;T,P&gt;"]
-        L4C["EventBus, LockPolicies"]
+    subgraph L4["Layer 4: C++20 Engine"]
+        direction TB
+        SV2["SharedValue&lt;T,P&gt;"]
+        DST["DatasetStore&lt;T&gt;"]
+        EBUS["EventBus"]
+        LOCK["LockPolicies"]
     end
 
-    L1 --> L2
-    L2 --> L3
-    L3 --> L4
+    L1 -->|"IDispatch / vtable calls"| L2
+    L2 -->|"LRPC over Named Pipes"| L3
+    L3 -->|"Direct C++ calls"| L4
 
-    style L1 fill:#3498db,color:#fff
-    style L2 fill:#9b59b6,color:#fff
+    style L1 fill:#4a90d9,color:#fff
+    style L2 fill:#7b68ee,color:#fff
     style L3 fill:#e67e22,color:#fff
     style L4 fill:#27ae60,color:#fff
 ```
 
-| Laag | Verantwoordelijkheid | Technologie | Bestanden |
-|---|---|---|---|
-| **Client** | Interface consumeren | VBScript, C#, Python, C++ | *(extern)* |
-| **COM Transport** | Interface definitie, marshaling, registratie, lifetime | IDL/MIDL, Windows Registry, LRPC | `*.idl`, `*_p.c`, `*.rgs` |
-| **ATL COM Wrapper** | Type-conversie, error vertaling, observer bridging | ATL 14, `CComVariant`, `CComBSTR` | `SharedValue.h/cpp`, `DatasetProxy.h/cpp` |
-| **C++20 Engine** | Business logica, thread-safety, event handling | C++20 templates, `std::mutex` | `SharedValueV2/include/*.hpp` |
-
----
-
-## 3. COM Fundamentals
-
-### Wat is COM?
-
-**Component Object Model** is een binaire interface standaard van Microsoft (1993) die taal-onafhankelijke object-communicatie mogelijk maakt. Kernprincipes:
-
-```mermaid
-graph LR
-    subgraph Principes["COM Kernprincipes"]
-        BI["Binary Interface<br/><i>Taal-onafhankelijke vtable</i>"]
-        RC["Reference Counting<br/><i>AddRef / Release</i>"]
-        QI["QueryInterface<br/><i>Interface navigatie</i>"]
-        LOC["Location Transparency<br/><i>In-proc / Out-of-proc / Remote</i>"]
-    end
-```
-
-### IUnknown — De Basis van Alles
-
-Elk COM object implementeert `IUnknown`:
-
-```cpp
-interface IUnknown {
-    HRESULT QueryInterface(REFIID riid, void** ppvObject);  // "Ondersteun je interface X?"
-    ULONG AddRef();     // Reference count +1
-    ULONG Release();    // Reference count -1, delete bij 0
-};
-```
-
-```mermaid
-classDiagram
-    class IUnknown {
-        <<interface>>
-        +QueryInterface(REFIID, void**) HRESULT
-        +AddRef() ULONG
-        +Release() ULONG
-    }
-
-    class IDispatch {
-        <<interface>>
-        +GetTypeInfoCount(UINT*) HRESULT
-        +GetTypeInfo(UINT, LCID, ITypeInfo**) HRESULT
-        +GetIDsOfNames(REFIID, LPOLESTR*, UINT, LCID, DISPID*) HRESULT
-        +Invoke(DISPID, REFIID, LCID, WORD, DISPPARAMS*, VARIANT*, EXCEPINFO*, UINT*) HRESULT
-    }
-
-    class ISupportErrorInfo {
-        <<interface>>
-        +InterfaceSupportsErrorInfo(REFIID) HRESULT
-    }
-
-    class ISharedValue {
-        <<custom interface>>
-        +SetValue(VARIANT) HRESULT
-        +GetValue(VARIANT*) HRESULT
-        +ShutdownServer() HRESULT
-        ...
-    }
-
-    IUnknown <|-- IDispatch : erft
-    IUnknown <|-- ISupportErrorInfo : erft
-    IDispatch <|-- ISharedValue : erft (dual interface)
-```
-
-### IDispatch — Late Binding
-
-Alle interfaces in dit project zijn **dual interfaces**: ze ondersteunen zowel vtable calls (snel, C++) als `IDispatch` (late binding, VBScript/C#/Python).
-
-```mermaid
-sequenceDiagram
-    participant VBS as VBScript Client
-    participant DISP as IDispatch
-    participant VTBL as vtable
-
-    Note over VBS,VTBL: Late Binding (VBScript)
-    VBS->>DISP: GetIDsOfNames("SetValue")
-    DISP-->>VBS: DISPID = 1
-    VBS->>DISP: Invoke(DISPID=1, args=[VARIANT])
-    DISP->>VTBL: CSharedValue::SetValue(VARIANT)
-    VTBL-->>DISP: HRESULT
-    DISP-->>VBS: HRESULT
-
-    Note over VBS,VTBL: Early Binding (C++)
-    VBS->>VTBL: pSharedValue->SetValue(variant)
-    Note right of VTBL: Directe vtable call<br/>Geen name lookup
-    VTBL-->>VBS: HRESULT
-```
-
-### HRESULT — De Universele Foutcode
-
-```
- 31  30  29  28             16  15                    0
-┌───┬───┬───┬────────────────┬──────────────────────────┐
-│ S │ R │ C │   Facility     │        Code              │
-│ e │   │   │   (4 = ITF)    │   (ErrorCode enum)       │
-│ v │   │   │                │                          │
-└───┴───┴───┴────────────────┴──────────────────────────┘
-
-S = 0: Success, 1: Error
-Facility ITF = Interface-specifieke fout
-Code = SharedValueV2::ErrorCode waarde
-```
-
-| HRESULT | Hex | Betekenis |
+| Layer | Responsibility | Technology |
 |---|---|---|
-| `S_OK` | `0x00000000` | Succes |
-| `E_POINTER` | `0x80004003` | Null pointer argument |
-| `E_FAIL` | `0x80004005` | Generieke fout |
-| `E_INVALIDARG` | `0x80070057` | Ongeldig argument |
-| `MAKE_HRESULT(1, 4, 100)` | `0x80040064` | `KeyNotFound` |
-| `MAKE_HRESULT(1, 4, 101)` | `0x80040065` | `DuplicateKey` |
-| `MAKE_HRESULT(1, 4, 102)` | `0x80040066` | `StoreModeNotEmpty` |
+| **Client Applications** | Consuming COM interfaces | VBScript, C#, Python, C++ |
+| **COM/RPC Transport** | Interface definition, marshaling, registration | IDL/MIDL, Windows Registry, LRPC |
+| **ATL COM Wrapper** | Type conversion, error translation, lifetime management | ATL, `CComVariant`, `CComBSTR`, `SAFEARRAY` |
+| **C++20 Engine** | Business logic, thread safety, event handling | C++20 templates, `std::mutex`, `std::atomic` |
 
 ---
 
-## 4. ATL Framework Internals
+## 3. COM Server Lifecycle
 
-**ATL** (Active Template Library) is een Microsoft C++ template library die de boilerplate reduceert voor het schrijven van COM objecten.
-
-### ATL Class Hiërarchie per COM Object
-
-```mermaid
-classDiagram
-    class CComObjectRootEx {
-        <<ATL base>>
-        #InternalAddRef() ULONG
-        #InternalRelease() ULONG
-        #Lock() void
-        #Unlock() void
-    }
-
-    class CComCoClass {
-        <<ATL factory>>
-        +GetObjectDescription() LPCTSTR
-        +UpdateRegistry(BOOL) HRESULT
-    }
-
-    class IDispatchImpl {
-        <<ATL helper>>
-        +GetTypeInfoCount() HRESULT
-        +GetTypeInfo() HRESULT
-        +GetIDsOfNames() HRESULT
-        +Invoke() HRESULT
-    }
-
-    class CSharedValue {
-        -m_core : SharedValue
-        -m_csCallbacks : CComAutoCriticalSection
-        -m_eventBridge : SharedValueEventBridge
-        +SetValue(VARIANT) HRESULT
-        +GetValue(VARIANT*) HRESULT
-        +ShutdownServer() HRESULT
-    }
-
-    CComObjectRootEx <|-- CSharedValue
-    CComCoClass <|-- CSharedValue
-    IDispatchImpl <|-- CSharedValue
-
-    note for CComObjectRootEx "Template: CComMultiThreadModel\nThread-safe AddRef/Release"
-    note for CSharedValue "DECLARE_CLASSFACTORY_SINGLETON\nDECLARE_REGISTRY_RESOURCEID\nBEGIN/END_COM_MAP"
-```
-
-### ATL Macro's Uitgelegd
-
-| Macro | Wat het doet |
-|---|---|
-| `CComObjectRootEx<CComMultiThreadModel>` | Thread-safe reference counting via `InterlockedIncrement/Decrement`. |
-| `CComCoClass<CSharedValue, &CLSID_SharedValue>` | Koppelt de class aan zijn CLSID en biedt fabrieksmethoden. |
-| `IDispatchImpl<ISharedValue, &IID_ISharedValue>` | Auto-implementeert `IDispatch` op basis van de TypeLib. |
-| `DECLARE_CLASSFACTORY_SINGLETON` | Vervangt de standaard class factory door `CComClassFactorySingleton`. Alle `CreateInstance()` calls retourneren hetzelfde object. |
-| `DECLARE_REGISTRY_RESOURCEID(IDR_SHAREDVALUE)` | Koppelt het `.rgs` bestand aan het COM object voor automatische registratie. |
-| `DECLARE_PROTECT_FINAL_CONSTRUCT` | Voorkomt `Release()` tijdens `FinalConstruct()` door tijdelijk de refcount te verhogen. |
-| `BEGIN_COM_MAP / END_COM_MAP` | Bouwt de `QueryInterface` tabel — welke interfaces dit object ondersteunt. |
-| `COM_INTERFACE_ENTRY(ISharedValue)` | Voegt `ISharedValue` toe aan de QI-map met correcte pointer offset. |
-| `OBJECT_ENTRY_AUTO(__uuidof(SharedValue), CSharedValue)` | Registreert het COM object bij de ATL module zodat de class factory het kan instantiëren. |
-
-### COM_MAP in Detail
-
-```cpp
-BEGIN_COM_MAP(CSharedValue)
-    COM_INTERFACE_ENTRY(ISharedValue)     // QueryInterface voor ISharedValue
-    COM_INTERFACE_ENTRY(IDispatch)        // QueryInterface voor IDispatch
-    COM_INTERFACE_ENTRY(ISupportErrorInfo) // QueryInterface voor ISupportErrorInfo
-END_COM_MAP()
-```
-
-Dit vertaalt naar een statische tabel die `QueryInterface` gebruikt:
-
-```mermaid
-graph LR
-    QI["QueryInterface(IID)"] --> LOOKUP["Lineaire scan<br/>door COM_MAP"]
-    LOOKUP --> IID_ISV["IID_ISharedValue<br/>→ this + offset 0"]
-    LOOKUP --> IID_ID["IID_IDispatch<br/>→ this + offset IDisp"]
-    LOOKUP --> IID_ISEI["IID_ISupportErrorInfo<br/>→ this + offset ISEI"]
-    LOOKUP --> E_NI["Onbekend IID<br/>→ E_NOINTERFACE"]
-```
-
----
-
-## 5. EXE Server Lifecycle
-
-### Volledige Lifecycle van Start tot Shutdown
-
-```mermaid
-stateDiagram-v2
-    [*] --> Geregistreerd: exe /RegServer
-    Geregistreerd --> Slapend: Registry entries geschreven
-
-    Slapend --> Opstarten: Client roept CreateObject()
-    note right of Opstarten: SCM start het EXE proces
-
-    Opstarten --> Actief: RegisterClassObjects()
-    note right of Actief: Message loop actief\nm_nLockCnt ≥ 1
-
-    Actief --> Actief: Client calls via RPC\nSetValue, AddRow, etc.
-    Actief --> Actief: Nieuwe client verbindt\nLock() count +1
-
-    Actief --> Afsluiten: ShutdownServer()
-    note right of Afsluiten: Clear proxy\nUnlock() → count = 0
-
-    Afsluiten --> Gestopt: Message loop eindigt
-    note right of Gestopt: RevokeClassObjects()\nProces exit
-
-    Gestopt --> Slapend: Volgende CreateObject()
-    
-    Geregistreerd --> [*]: exe /UnregServer
-```
-
-### _tWinMain Entry Point — Stap voor Stap
+The EXE server undergoes a specific lifecycle model that differs from the traditional DLL variant.
 
 ```mermaid
 sequenceDiagram
-    participant OS as Windows
-    participant MAIN as _tWinMain
-    participant MOD as CAtlExeModuleT
-    participant SCM as COM SCM
-    participant MSGLOOP as Win32 Message Loop
+    participant Client as Client (VBScript)
+    participant SCM as Windows SCM
+    participant EXE as ATLProjectcomserver.exe
+    participant Module as CAtlExeModuleT
+    participant SV as CSharedValue
 
-    OS->>MAIN: Start ATLProjectcomserver.exe
-    MAIN->>MOD: _AtlModule.Lock()
-    Note right of MOD: m_nLockCnt = 1<br/>(voorkomt voortijdig exit)
-    
-    MAIN->>MOD: _AtlModule.WinMain(nShowCmd)
-    MOD->>MOD: ParseCommandLine()
-    
-    alt /RegServer
-        MOD->>MOD: RegisterAppId()
-        MOD->>MOD: RegisterServer(TRUE)
-        MOD-->>MAIN: return (exit)
-    else /UnregServer
-        MOD->>MOD: UnregisterServer(TRUE)
-        MOD->>MOD: UnregisterAppId()
-        MOD-->>MAIN: return (exit)
-    else Normaal (gestart door SCM)
-        MOD->>SCM: CoRegisterClassObject() × 4
-        Note right of SCM: SharedValue, DatasetProxy,<br/>MathOperations, SharedValueCallback
-        
-        MOD->>MSGLOOP: GetMessage() loop
-        Note right of MSGLOOP: Blokkeert totdat<br/>m_nLockCnt == 0
-        
-        MSGLOOP-->>MOD: WM_QUIT of lock count = 0
-        MOD->>SCM: CoRevokeClassObject() × 4
-        MOD-->>MAIN: return 0
-    end
+    Note over Client,EXE: Phase 1: Startup
+    Client->>SCM: CreateObject("ATLProjectcomserverExe.SharedValue")
+    SCM->>SCM: Lookup CLSID in Registry
+    SCM->>EXE: Start EXE process
+    EXE->>Module: _tWinMain() → _AtlModule.Lock()
+    Module->>Module: RegisterClassObjects()
+    Module->>Module: WinMain() message loop
+
+    Note over Client,EXE: Phase 2: Object Creation
+    SCM->>Module: IClassFactory::CreateInstance
+    Module->>SV: CSharedValue::FinalConstruct()
+    SV->>SV: Create DatasetProxy singleton
+    SV->>SV: Subscribe to SharedValueV2 core
+    Module-->>SCM: ISharedValue* (marshaled)
+    SCM-->>Client: Proxy pointer
+
+    Note over Client,EXE: Phase 3: Utilization
+    Client->>SCM: SetValue("data")
+    SCM->>SV: ISharedValue::SetValue(VARIANT)
+    SV->>SV: m_core.SetValue(CComVariant)
+    SV-->>SCM: S_OK
+    SCM-->>Client: S_OK
+
+    Note over Client,EXE: Phase 4: Graceful Shutdown
+    Client->>SCM: ShutdownServer()
+    SCM->>SV: ISharedValue::ShutdownServer()
+    SV->>SV: Clear DatasetProxy reference
+    SV->>Module: _AtlModule.Unlock()
+    Module->>Module: Message loop ends
+    EXE->>EXE: Process exit
 ```
 
-### Lock Count Mechanisme
+### Critical Shutdown Details
 
-```mermaid
-graph TD
-    START["_tWinMain()"] -->|"Lock()"| LC1["m_nLockCnt = 1"]
-    
-    LC1 -->|"Client 1 CreateInstance"| LC2["m_nLockCnt = 2"]
-    LC2 -->|"Client 2 CreateInstance"| LC3["m_nLockCnt = 3"]
-    LC3 -->|"Client 2 Release()"| LC2B["m_nLockCnt = 2"]
-    LC2B -->|"Client 1 Release()"| LC1B["m_nLockCnt = 1"]
-    
-    LC1B -->|"ShutdownServer() → Unlock()"| LC0["m_nLockCnt = 0"]
-    LC0 -->|"PostThreadMessage(WM_QUIT)"| EXIT["Message loop stopt<br/>Proces exit"]
+The EXE server does **not** terminate when the final client disconnects (ATL default behavior), because `_AtlModule.Lock()` inside `_tWinMain` retains an extra reference count. This prevents premature termination. Only upon an explicit `ShutdownServer()` call is:
 
-    style LC0 fill:#e74c3c,color:#fff
-    style EXIT fill:#c0392b,color:#fff
-```
+1. The global `DatasetProxy` reference released (`m_core.SetValue(CComVariant())`)
+2. The module lock removed (`_AtlModule.Unlock()`)
+3. The Win32 message loop terminated
 
 ---
 
-## 6. COM Object Model
-
-### Interface Hiërarchie
+## 4. Component Model
 
 ```mermaid
 classDiagram
-    class IUnknown {
-        <<COM basis>>
-    }
-
-    class IDispatch {
-        <<Automation>>
-    }
-
-    class ISupportErrorInfo {
-        <<Error info>>
-    }
-
-    class IMathOperations {
-        <<dual interface>>
-        +Add(DOUBLE, DOUBLE, DOUBLE*) HRESULT
-        +Subtract(DOUBLE, DOUBLE, DOUBLE*) HRESULT
-        +Multiply(DOUBLE, DOUBLE, DOUBLE*) HRESULT
-        +Divide(DOUBLE, DOUBLE, DOUBLE*) HRESULT
-    }
-
     class ISharedValue {
-        <<dual interface>>
+        <<COM Interface>>
         +SetValue(VARIANT) HRESULT
         +GetValue(VARIANT*) HRESULT
         +GetCurrentUTCDateTime(BSTR*) HRESULT
@@ -460,9 +201,7 @@ classDiagram
     }
 
     class IDatasetProxy {
-        <<dual interface>>
-        +SetStorageMode(LONG) HRESULT
-        +GetStorageMode(LONG*) HRESULT
+        <<COM Interface>>
         +AddRow(BSTR, BSTR) HRESULT
         +GetRowData(BSTR, BSTR*) HRESULT
         +UpdateRow(BSTR, BSTR, VARIANT_BOOL*) HRESULT
@@ -472,537 +211,641 @@ classDiagram
         +HasKey(BSTR, VARIANT_BOOL*) HRESULT
         +FetchPageKeys(LONG, LONG, VARIANT*) HRESULT
         +FetchPageData(LONG, LONG, VARIANT*) HRESULT
+        +SetStorageMode(LONG) HRESULT
+        +GetStorageMode(LONG*) HRESULT
     }
 
     class ISharedValueCallback {
-        <<dual interface>>
+        <<COM Interface>>
         +OnValueChanged(VARIANT) HRESULT
         +OnDateTimeChanged(BSTR) HRESULT
     }
 
     class IEventCallback {
-        <<dual interface>>
+        <<COM Interface>>
         +OnMutationEvent(LONG, BSTR, BSTR, BSTR, BSTR, BSTR, LONG) HRESULT
     }
 
-    IUnknown <|-- IDispatch
-    IUnknown <|-- ISupportErrorInfo
-    IDispatch <|-- IMathOperations
-    IDispatch <|-- ISharedValue
-    IDispatch <|-- IDatasetProxy
-    IDispatch <|-- ISharedValueCallback
-    IDispatch <|-- IEventCallback
+    class CSharedValue {
+        -m_core : SharedValue~CComVariant, LocalMutexPolicy~
+        -m_csCallbacks : CComAutoCriticalSection
+        -m_callbacks : vector~CComPtr~
+        -m_eventBridge : SharedValueEventBridge
+        +FinalConstruct() HRESULT
+        +ShutdownServer() HRESULT
+    }
+
+    class CDatasetProxy {
+        -m_store : unique_ptr~DatasetStore~
+        -m_bridge : ComEventBridge
+        +FinalConstruct() HRESULT
+    }
+
+    ISharedValue <|.. CSharedValue : implements
+    IDatasetProxy <|.. CDatasetProxy : implements
+    CSharedValue --> CDatasetProxy : "owns (server-side singleton)"
+    CSharedValue --> ISharedValueCallback : "notifies observers"
+    CSharedValue --> IEventCallback : "via SharedValueEventBridge"
+    CDatasetProxy --> IEventCallback : "via ComEventBridge"
+
+    note for CSharedValue "DECLARE_CLASSFACTORY_SINGLETON\nAll clients share the same instance"
 ```
-
-### GUID Tabel
-
-| Entiteit | Type | GUID |
-|---|---|---|
-| **AppID / TypeLib** | Library | `{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}` |
-| SharedValue | CLSID | `{A5B21149-FB8C-4E50-8C52-65F3DC4AFEBF}` |
-| DatasetProxy | CLSID | `{1D85075B-6ECB-4BE4-8317-9DDA91292ED8}` |
-| MathOperations | CLSID | `{1CE8C512-FB0A-4C47-B3CD-44219BDC8DDF}` |
-| SharedValueCallback | CLSID | `{6818DD57-F9E6-45BE-AA20-EA4B5B658AF3}` |
-| ISharedValue | IID | `{8D55631F-1994-4F36-A3A3-D5B40EB0E0DB}` |
-| IDatasetProxy | IID | `{50D4D0DB-6D9E-455F-8D6C-749CDBCF1949}` |
-| IMathOperations | IID | `{488E9F3C-299B-4FE1-8B25-A2B9C2A23506}` |
-| ISharedValueCallback | IID | `{E7639719-258C-46A3-B349-C3C96AC4B46C}` |
-| IEventCallback | IID | `{DEC06BDB-7655-4E71-9937-110B78FCC576}` |
 
 ---
 
-## 7. RPC Marshaling & Proxy/Stub
+## 5. SharedValueV2 — The C++ Engine
 
-### Hoe Cross-Process Calls Werken
-
-Omdat client en server in **aparte processen** leven, kan een interface-pointer niet simpel worden doorgegeven. Windows COM lost dit op met **proxy/stub marshaling**:
+The engine is a header-only C++20 library featuring a template-based architecture. It is entirely independent of COM and ATL.
 
 ```mermaid
-sequenceDiagram
-    participant Client as Client Proces
-    participant Proxy as Proxy Object<br/>(in client)
-    participant Channel as RPC Channel<br/>(Named Pipe)
-    participant Stub as Stub Object<br/>(in server)
-    participant Server as COM Object<br/>(CDatasetProxy)
+classDiagram
+    class SharedValue~T_MutexPolicy~ {
+        -m_value : T
+        -m_mutex : MutexPolicy
+        -m_observers : vector~ISharedValueObserver*~
+        -m_eventBus : EventBus~MutexPolicy~
+        +SetValue(T) void
+        +GetValue() T
+        +LockSharedValue() bool
+        +LockSharedValueTimeout(ulong) bool
+        +Unlock() void
+        +Subscribe(ISharedValueObserver*) void
+        +Unsubscribe(ISharedValueObserver*) void
+        +GetEventBus() EventBus&
+        -notifyValueChanged(T) void
+        -notifyDateTimeChanged(wstring) void
+    }
 
-    Note over Client,Server: AddRow("server01", "status:online")
+    class DatasetStore~T~ {
+        -m_engine : unique_ptr~IStorageEngine~
+        -m_eventBus : EventBus
+        +AddRow(wstring, T) void
+        +GetRowData(wstring) T
+        +UpdateRow(wstring, T) bool
+        +RemoveRow(wstring) bool
+        +FetchPageKeys(int, int) vector
+        +SetStorageMode(int) void
+        +GetEventBus() EventBus&
+    }
 
-    Client->>Proxy: pProxy->AddRow(BSTR, BSTR)
-    Note right of Proxy: Interface ziet eruit<br/>als een lokaal object
+    class EventBus~MutexPolicy~ {
+        -m_listeners : vector~IEventListener*~
+        -m_mutex : MutexPolicy
+        -m_sequenceCounter : atomic~uint64_t~
+        +Subscribe(IEventListener*) void
+        +Unsubscribe(IEventListener*) void
+        +Emit(MutationEvent) void
+        +Emit(EventType, ...) void
+    }
 
-    Proxy->>Proxy: Serialiseer BSTR params<br/>naar NDR format
-    Proxy->>Channel: Verstuur NDR buffer<br/>via Named Pipe IPC
-    Channel->>Stub: Ontvang NDR buffer<br/>in server proces
-    Stub->>Stub: Deserialiseer BSTR<br/>uit NDR buffer
-    Stub->>Server: CDatasetProxy::AddRow(BSTR, BSTR)
-    Server->>Server: m_store->AddRow(wstring, wstring)
-    Server-->>Stub: HRESULT (S_OK)
-    Stub-->>Channel: Serialiseer HRESULT
-    Channel-->>Proxy: Response buffer
-    Proxy-->>Client: HRESULT (S_OK)
+    class ISharedValueObserver~T~ {
+        <<interface>>
+        +OnValueChanged(T) void*
+        +OnDateTimeChanged(wstring) void*
+    }
+
+    class IEventListener {
+        <<interface>>
+        +OnEvent(MutationEvent) void*
+    }
+
+    class LocalMutexPolicy {
+        -m_mutex : std::mutex
+        +lock() void
+        +unlock() void
+        +try_lock() bool
+    }
+
+    class NullMutexPolicy {
+        +lock() void
+        +unlock() void
+        +try_lock() bool
+    }
+
+    class NamedSystemMutexPolicy {
+        -m_hMutex : HANDLE
+        +lock() void
+        +unlock() void
+        +try_lock_for(DWORD) bool
+    }
+
+    SharedValue --> EventBus : contains
+    SharedValue --> ISharedValueObserver : notifies
+    DatasetStore --> EventBus : contains
+    EventBus --> IEventListener : notifies
+
+    SharedValue ..> LocalMutexPolicy : "Policy parameter"
+    SharedValue ..> NullMutexPolicy : "Policy parameter"
+    SharedValue ..> NamedSystemMutexPolicy : "Policy parameter"
 ```
 
-### MIDL Code Generatie Pipeline
+### Template Instantiations in the COM Server
+
+```cpp
+// Within CSharedValue — thread-safe with local mutex
+SharedValueV2::SharedValue<CComVariant, SharedValueV2::LocalMutexPolicy> m_core;
+
+// Within CDatasetProxy — thread-safe dataset store
+std::unique_ptr<SharedValueV2::DatasetStore<std::wstring>> m_store;
+```
+
+---
+
+## 6. COM-to-C++ Bridge Layer
+
+The bridge layer translates between COM types and C++ native types. There are two bridge classes acting as adapters.
+
+```mermaid
+graph LR
+    subgraph COM["COM World"]
+        VARIANT["VARIANT"]
+        BSTR["BSTR"]
+        SAFEARRAY["SAFEARRAY"]
+        HRESULT["HRESULT"]
+        IErrorInfo["IErrorInfo"]
+        IEC["IEventCallback"]
+    end
+
+    subgraph Bridge["Bridge Layer"]
+        direction TB
+        CSV["CSharedValue"]
+        CDP["CDatasetProxy"]
+        CEH["ComErrorHelper"]
+        SVB["SharedValueEventBridge"]
+        CEB["ComEventBridge"]
+    end
+
+    subgraph CPP["C++ World"]
+        CCV["CComVariant"]
+        WSTR["std::wstring"]
+        VEC["std::vector"]
+        EXC["SharedValueException"]
+        ME["MutationEvent"]
+    end
+
+    VARIANT -->|"CComVariant::Copy()"| CCV
+    BSTR -->|"CComBSTR → c_str()"| WSTR
+    EXC -->|"COM_METHOD_BODY"| HRESULT
+    EXC -->|"AtlReportError()"| IErrorInfo
+    VEC -->|"SafeArrayCreate()"| SAFEARRAY
+    ME -->|"Bridge::OnEvent()"| IEC
+
+    style Bridge fill:#e67e22,color:#fff
+```
+
+### ComErrorHelper — Exception Translation
+
+The `COM_METHOD_BODY` macro catches C++ exceptions and translates them to COM-compatible `HRESULT` + `IErrorInfo`:
 
 ```mermaid
 graph TD
-    IDL["ATLProjectcomserver.idl<br/><i>Interface definities in IDL taal</i>"] -->|"midl.exe compiler"| GEN
+    CPP_CODE["C++ Code in COM Method"] -->|throws| CATCH
 
-    subgraph GEN["Gegenereerde Bestanden"]
-        IH["_i.h<br/>C++ interface declaraties<br/>+ CLSID/IID constanten"]
-        IC["_i.c<br/>GUID definities<br/>(linker symbols)"]
-        PC["_p.c<br/>Proxy/Stub marshal code<br/>(NDR routines per methode)"]
-        DC["dlldata.c<br/>DLL entry points voor<br/>proxy/stub registratie"]
-        TLB[".tlb<br/>Type Library binary<br/>(voor #import / late binding)"]
+    subgraph CATCH["COM_METHOD_BODY Exception Handler"]
+        E1["SharedValueException"]
+        E2["std::out_of_range"]
+        E3["std::invalid_argument"]
+        E4["std::exception"]
+        E5["... (unknown)"]
     end
 
-    IH -->|"#include"| SERVER["Server Code<br/>(SharedValue.h, DatasetProxy.h)"]
-    IH -->|"#include"| CLCODE["Client Code<br/>(stop_server.cpp)"]
-    PC -->|"Gelinkt in"| EXESERVER["ATLProjectcomserver.exe<br/>(self-contained proxy/stub)"]
-    TLB -->|"Embedded in .rc"| EXESERVER
-    TLB -->|"#import genereert"| TLHTLI[".tlh / .tli<br/>Smart pointer wrappers"]
+    E1 -->|"MAKE_HRESULT(SEVERITY_ERROR,<br/>FACILITY_ITF, ErrorCode)"| HR1["HRESULT + IErrorInfo<br/>(with description)"]
+    E2 -->|"E_BOUNDS"| HR2["HRESULT + IErrorInfo"]
+    E3 -->|"E_INVALIDARG"| HR3["HRESULT + IErrorInfo"]
+    E4 -->|"E_FAIL"| HR4["HRESULT + IErrorInfo"]
+    E5 -->|"E_UNEXPECTED"| HR5["HRESULT + L'Unknown error'"]
 
-    style IDL fill:#f39c12,color:#fff
+    HR1 --> CLIENT["Client receives<br/>COMException (C#)<br/>Err.Description (VBS)"]
+    HR2 --> CLIENT
+    HR3 --> CLIENT
+    HR4 --> CLIENT
+    HR5 --> CLIENT
 ```
-
-### NDR (Network Data Representation)
-
-Elke parameter wordt geserialiseerd volgens het NDR protocol:
-
-| COM Type | NDR Wire Format | Grootte |
-|---|---|---|
-| `LONG` | 4 bytes, little-endian | 4 bytes |
-| `DOUBLE` | IEEE 754, 8 bytes | 8 bytes |
-| `VARIANT_BOOL` | 2 bytes (0x0000 of 0xFFFF) | 2 bytes |
-| `BSTR` | 4-byte length prefix + UTF-16 data + null | variabel |
-| `VARIANT` | 2-byte vt + padding + waarde | variabel |
-| `SAFEARRAY` | dimensies + bounds + element data | variabel |
 
 ---
 
-## 8. Singleton Architectuur
+## 7. Cross-Process Communication (RPC Marshaling)
 
-### CSharedValue als Singleton
-
-```mermaid
-graph TB
-    CF["CComClassFactorySingleton<br/><i>DECLARE_CLASSFACTORY_SINGLETON</i>"]
-    
-    CF -->|"Eerste CreateInstance()"| CREATE["Maak CSharedValue<br/>Roep FinalConstruct()"]
-    CREATE --> SV["CSharedValue instantie<br/><i>(leeft zolang server draait)</i>"]
-    
-    CF -->|"Tweede CreateInstance()"| SAME["Retourneer zelfde pointer"]
-    SAME --> SV
-    
-    CF -->|"N-de CreateInstance()"| SAME2["Retourneer zelfde pointer"]
-    SAME2 --> SV
-
-    subgraph FinalConstruct["FinalConstruct() — eenmalig"]
-        FC1["1. Maak CDatasetProxy via<br/>CComObject::CreateInstance()"]
-        FC2["2. Wrap in CComVariant(VT_DISPATCH)"]
-        FC3["3. Sla op als m_core.SetValue(variant)"]
-        FC4["4. Subscribe op SharedValueV2 observers"]
-        FC1 --> FC2 --> FC3 --> FC4
-    end
-
-    CREATE --> FinalConstruct
-```
-
-### Waarom Singleton?
-
-| Eigenschap | Zonder Singleton | Met Singleton |
-|---|---|---|
-| Client A schrijft `SetValue("X")` | Alleen zichtbaar voor A | Zichtbaar voor A, B, C |
-| Client B leest `GetValue()` | Eigen lege instantie | Ziet "X" van Client A |
-| `DatasetProxy` rijen | Per-client kopie | Eén gedeelde dataset |
-| Geheugengebruik | N × instantie | 1 instantie |
-
----
-
-## 9. Observer & Event Architectuur
-
-### Twee Parallelle Systemen
-
-```mermaid
-graph TB
-    subgraph Legacy["Systeem 1: ISharedValueCallback (legacy)"]
-        direction TB
-        SV_CORE["SharedValueV2 Core<br/>notifyValueChanged()"] 
-        SV_OBS["CSharedValue<br/>implementeert<br/>ISharedValueObserver&lt;CComVariant&gt;"]
-        CB_LOCK["m_csCallbacks<br/>(CComAutoCriticalSection)"]
-        CB_COPY["Kopieer vector<br/>buiten lock"]
-        CB_FIRE["OnValueChanged(VARIANT)<br/>OnDateTimeChanged(BSTR)"]
-        CLIENT_CB["Client's<br/>ISharedValueCallback"]
-
-        SV_CORE --> SV_OBS
-        SV_OBS --> CB_LOCK
-        CB_LOCK --> CB_COPY
-        CB_COPY --> CB_FIRE
-        CB_FIRE --> CLIENT_CB
-    end
-
-    subgraph Modern["Systeem 2: IEventCallback (modern EventBus)"]
-        direction TB
-        EB_CORE["EventBus::Emit()<br/>MutationEvent struct"]
-        EB_BRIDGE["SharedValueEventBridge<br/>ComEventBridge"]
-        EB_CONV["Converteer:<br/>MutationEvent → BSTR params"]
-        EB_FIRE["OnMutationEvent(<br/>type, key, old, new,<br/>source, timestamp, seqId)"]
-        CLIENT_EC["Client's<br/>IEventCallback"]
-
-        EB_CORE --> EB_BRIDGE
-        EB_BRIDGE --> EB_CONV
-        EB_CONV --> EB_FIRE
-        EB_FIRE --> CLIENT_EC
-    end
-
-    style Legacy fill:#2980b9,color:#fff
-    style Modern fill:#27ae60,color:#fff
-```
-
-### Deadlock-Free Notificatie
-
-Het kritieke patroon dat deadlocks voorkomt bij trage of crashende clients:
+As an Out-of-Process server, all method calls occur via **LRPC** (Local Remote Procedure Call) over Windows Named Pipes.
 
 ```mermaid
 sequenceDiagram
-    participant Caller as Thread A: SetValue()
-    participant Mutex as m_csCallbacks
-    participant Copy as Lokale vector
-    participant Slow as Client Observer (traag)
-    participant Fast as Client Observer (snel)
+    participant Client as Client Process
+    participant ProxyDLL as Proxy DLL (in client)
+    participant RPC as Windows RPC Runtime
+    participant StubDLL as Stub DLL (in server)
+    participant Server as COM Server EXE
 
-    Caller->>Mutex: LOCK
-    Caller->>Copy: callbacksCopy = m_callbacks
-    Caller->>Mutex: UNLOCK
-    
-    Note over Caller,Fast: Andere threads kunnen nu<br/>vrij Subscribe/Unsubscribe aanroepen
-
-    Caller->>Fast: OnValueChanged(variant)
-    Fast-->>Caller: return (snel)
-    
-    Caller->>Slow: OnValueChanged(variant)
-    Note over Slow: 500ms verwerking...<br/>Server is NIET geblokkeerd
-    Slow-->>Caller: return
+    Note over Client,Server: IDatasetProxy::AddRow("key", "value")
+    Client->>ProxyDLL: AddRow(BSTR, BSTR)
+    ProxyDLL->>ProxyDLL: Serialize BSTR parameters
+    ProxyDLL->>RPC: NDR-encoded buffer via Named Pipe
+    RPC->>StubDLL: Receive buffer in server process
+    StubDLL->>StubDLL: Deserialize BSTR parameters
+    StubDLL->>Server: CDatasetProxy::AddRow(BSTR, BSTR)
+    Server->>Server: m_store->AddRow(key, value)
+    Server-->>StubDLL: HRESULT (S_OK)
+    StubDLL-->>RPC: NDR-encoded response
+    RPC-->>ProxyDLL: Response via Named Pipe
+    ProxyDLL-->>Client: HRESULT (S_OK)
 ```
+
+### How Proxy/Stub Marshaling Works
+
+The MIDL compiler automatically generates proxy/stub code from the `.idl` files:
+
+```mermaid
+graph TD
+    IDL["ATLProjectcomserver.idl<br/>(Interface definitions)"] -->|MIDL Compiler| GEN
+
+    subgraph GEN["Generated Files"]
+        IH["_i.h<br/>(Interface headers + CLSIDs)"]
+        IC["_i.c<br/>(GUID definitions)"]
+        PC["_p.c<br/>(Proxy/Stub code)"]
+        TLB["*.tlb<br/>(Type Library)"]
+    end
+
+    PC -->|"Embedded within"| EXESERVER["EXE Server<br/>(self-registering)"]
+    TLB -->|"Utilized by"| CLIENTS["Late-binding clients<br/>(IDispatch)"]
+    IH -->|"Included by"| CPPCLIENTS["C++ Clients<br/>(early-binding)"]
+```
+
+---
+
+## 8. Observer & Event Architecture
+
+The system features two parallel observer mechanisms: the **legacy SharedValueCallback** system and the modern **EventBus** system.
+
+```mermaid
+graph TB
+    subgraph Legacy["Legacy Observer (ISharedValueCallback)"]
+        SV_OBS["CSharedValue<br/>implements ISharedValueObserver"]
+        V2_CORE["SharedValueV2::SharedValue<br/>→ notifyValueChanged()"]
+        CB_LIST["m_callbacks vector<br/>(CComAutoCriticalSection)"]
+        ISVCB["Client's ISharedValueCallback<br/>→ OnValueChanged()"]
+
+        V2_CORE -->|"copy observer list<br/>outside local lock"| SV_OBS
+        SV_OBS --> CB_LIST
+        CB_LIST -->|"iterate copy"| ISVCB
+    end
+
+    subgraph Modern["Modern EventBus (IEventCallback)"]
+        EB_CORE["EventBus::Emit()"]
+        SVB_BRIDGE["SharedValueEventBridge<br/>ComEventBridge"]
+        IECB["Client's IEventCallback<br/>→ OnMutationEvent()"]
+
+        EB_CORE -->|"copy listener list<br/>outside local lock"| SVB_BRIDGE
+        SVB_BRIDGE -->|"convert MutationEvent<br/>→ COM BSTR parameters"| IECB
+    end
+
+    style Legacy fill:#3498db,color:#fff
+    style Modern fill:#2ecc71,color:#fff
+```
+
+### Deadlock-Free Notification (Critical Pattern)
+
+The notification mechanism has been explicitly designed to prevent deadlocks with slow or stalling clients:
+
+```mermaid
+sequenceDiagram
+    participant Caller as SetValue() Caller
+    participant Core as SharedValue Core
+    participant Lock as m_mutex
+    participant Copy as Local Copy
+    participant Obs1 as Observer 1 (fast)
+    participant Obs2 as Observer 2 (slow)
+
+    Caller->>Core: SetValue(newVal)
+    Core->>Lock: lock_guard LOCK
+    Core->>Core: m_value = newVal
+    Core->>Copy: observersCopy = m_observers
+    Core->>Lock: ~lock_guard UNLOCK
+
+    Note over Core,Obs2: Mutex is FREE — other threads<br/>can now call SetValue/GetValue
+    Core->>Obs1: OnValueChanged(newVal)
+    Obs1-->>Core: return (fast)
+    Core->>Obs2: OnValueChanged(newVal)
+    Note over Obs2: Slow processing...<br/>Server does NOT block
+    Obs2-->>Core: return (slow, but no deadlock)
+```
+
+---
+
+## 9. Thread-Safety & Synchronization
+
+### Policy-Based Design for Lock Strategies
+
+```mermaid
+graph TD
+    SV["SharedValue&lt;T, Policy&gt;"]
+
+    subgraph Policies["Available Lock Policies"]
+        LP["LocalMutexPolicy<br/>std::mutex<br/><i>Fast, single-process</i>"]
+        NP["NullMutexPolicy<br/>No-op<br/><i>Zero overhead, single-thread</i>"]
+        NSP["NamedSystemMutexPolicy<br/>Windows Named Mutex<br/><i>Cross-process synchronization</i>"]
+    end
+
+    SV -->|"template parameter"| LP
+    SV -->|"template parameter"| NP
+    SV -->|"template parameter"| NSP
+
+    LP -->|"Used in"| PROD["ATLProjectcomserverExe<br/>(production)"]
+    NP -->|"Used in"| TEST["Unit Tests<br/>(single-threaded)"]
+    NSP -->|"Available for"| FUTURE["Cross-process Shared Memory<br/>(future)"]
+```
+
+### Monitor Pattern — Combined Data + Lock
+
+Data is never accessible without an active lock. The `SharedValue<T, Policy>` class enforces this:
+
+```mermaid
+graph TD
+    subgraph Anti["Anti-Pattern (dangerous)"]
+        direction LR
+        A1["Thread A reads value"] --> A2["Thread B writes value"]
+        A2 --> A3["Race condition!"]
+    end
+
+    subgraph Monitor["Monitor Pattern (SharedValueV2)"]
+        direction LR
+        M1["lock_guard LOCK"] --> M2["Read/write m_value"]
+        M2 --> M3["~lock_guard UNLOCK"]
+    end
+
+    subgraph Code["C++ Implementation"]
+        C1["void SetValue(const T& newValue) {<br/>    {<br/>        std::lock_guard lock(m_mutex);<br/>        m_value = newValue;  // only here<br/>    }<br/>    notifyValueChanged(newValue);<br/>}"]
+    end
+
+    style Anti fill:#e74c3c,color:#fff
+    style Monitor fill:#27ae60,color:#fff
+```
+
+### Synchronization Overview per Component
+
+| Component | Lock Type | Scope | Protects |
+|---|---|---|---|
+| `SharedValue::m_mutex` | `LocalMutexPolicy` | `m_value`, `m_observers` | Shared state and observer list |
+| `EventBus::m_mutex` | `LocalMutexPolicy` | `m_listeners` | Event listener registrations |
+| `CSharedValue::m_csCallbacks` | `CComAutoCriticalSection` | `m_callbacks` | COM callback pointer list |
+| `DatasetStore` (internal) | `LocalMutexPolicy` | Store data | CRUD operations on the dataset |
+| `EventBus::m_sequenceCounter` | `std::atomic<uint64_t>` | Counter | Lock-free sequence numbering |
 
 ---
 
 ## 10. Error Handling Pipeline
 
+Errors flow from the C++ engine through the COM layer to the client in their own language-specific formatting.
+
 ```mermaid
 graph LR
-    subgraph CPP["C++ Engine"]
-        EX["throw KeyNotFoundException<br/>throw DuplicateKeyException<br/>throw StoreModeException"]
+    subgraph Engine["C++ Engine"]
+        KNF["KeyNotFoundException<br/>code: 100"]
+        DKE["DuplicateKeyException<br/>code: 101"]
+        SME["StoreModeException<br/>code: 102"]
+        LTE["SharedValueException<br/>code: 200 (LockTimeout)"]
     end
 
-    subgraph MACRO["COM_METHOD_BODY Macro"]
-        CATCH["catch (SharedValueException& e)"]
-        HR["MAKE_HRESULT(<br/>SEVERITY_ERROR,<br/>FACILITY_ITF,<br/>e.code)"]
-        EI["AtlReportError(<br/>CLSID, e.what(),<br/>IID, hresult)"]
+    subgraph ATL["ATL COM Wrapper"]
+        CMB["COM_METHOD_BODY<br/>catch → AtlReportError()"]
     end
 
-    subgraph COM["COM Transport"]
-        IERR["IErrorInfo object<br/>op thread-local storage"]
-        HRVAL["HRESULT<br/>retourwaarde"]
+    subgraph COM["COM Runtime"]
+        HR["HRESULT<br/>MAKE_HRESULT(1, 4, code)"]
+        EI["IErrorInfo<br/>(description string)"]
     end
 
-    subgraph Clients["Client Talen"]
-        CSHARP["C#:<br/>COMException<br/>.Message + .HResult"]
-        VBS_E["VBScript:<br/>Err.Number<br/>Err.Description"]
-        CPP_E["C++:<br/>FAILED(hr)<br/>+ GetErrorInfo()"]
+    subgraph Clients["Client Languages"]
+        CSHARP["C#: COMException<br/>.Message + .HResult"]
+        VBS_ERR["VBScript: Err.Number<br/>+ Err.Description"]
+        CPP_HR["C++: HRESULT check<br/>+ IErrorInfo query"]
     end
 
-    EX --> CATCH
-    CATCH --> HR
-    HR --> EI
-    EI --> IERR
-    HR --> HRVAL
-    IERR --> CSHARP
-    IERR --> VBS_E
-    IERR --> CPP_E
-    HRVAL --> CSHARP
-    HRVAL --> VBS_E
-    HRVAL --> CPP_E
+    KNF --> CMB
+    DKE --> CMB
+    SME --> CMB
+    LTE --> CMB
+    CMB --> HR
+    CMB --> EI
+    HR --> CSHARP
+    HR --> VBS_ERR
+    HR --> CPP_HR
+    EI --> CSHARP
+    EI --> VBS_ERR
+    EI --> CPP_HR
 ```
 
-### ISupportErrorInfo
+### Exception Hierarchy
 
-`CSharedValue` en `CDatasetProxy` implementeren `ISupportErrorInfo`. Dit vertelt de COM runtime dat deze objecten rijke foutinformatie leveren via `IErrorInfo`:
+```mermaid
+classDiagram
+    class std_runtime_error {
+        +what() const char*
+    }
 
-```cpp
-STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid) {
-    if (InlineIsEqualGUID(riid, IID_ISharedValue)) return S_OK;
-    return S_FALSE;
-}
+    class SharedValueException {
+        +code : ErrorCode
+        +SharedValueException(ErrorCode, string)
+    }
+
+    class KeyNotFoundException {
+        +KeyNotFoundException(wstring key)
+    }
+
+    class DuplicateKeyException {
+        +DuplicateKeyException(wstring key)
+    }
+
+    class StoreModeException {
+        +StoreModeException()
+    }
+
+    class InvalidStorageModeException {
+        +InvalidStorageModeException(int mode)
+    }
+
+    std_runtime_error <|-- SharedValueException
+    SharedValueException <|-- KeyNotFoundException
+    SharedValueException <|-- DuplicateKeyException
+    SharedValueException <|-- StoreModeException
+    SharedValueException <|-- InvalidStorageModeException
 ```
 
 ---
 
-## 11. Type Conversie — COM ↔ C++
+## 11. .NET Interop & Late Binding
 
-### Inkomende Conversies (Client → Server)
-
-| COM Parameter | C++ Intern | Conversie Code |
-|---|---|---|
-| `BSTR key` | `std::wstring` | `std::wstring(key)` |
-| `VARIANT value` | `CComVariant` | `CComVariant::Copy(&value)` |
-| `LONG mode` | `StorageMode` enum | `static_cast<StorageMode>(mode)` |
-| `ISharedValueCallback*` | `CComPtr<ISharedValueCallback>` | `push_back(callback)` |
-
-### Uitgaande Conversies (Server → Client)
-
-| C++ Intern | COM Parameter | Conversie Code |
-|---|---|---|
-| `std::wstring` | `BSTR*` | `CComBSTR(str.c_str()).Detach()` |
-| `CComVariant` | `VARIANT*` | `varValue.Detach(value)` |
-| `bool` | `VARIANT_BOOL*` | `VARIANT_TRUE / VARIANT_FALSE` |
-| `size_t` | `LONG*` | `static_cast<LONG>(count)` |
-| `vector<wstring>` | `VARIANT* (SAFEARRAY)` | `CComSafeArray<VARIANT>` builder |
-| `vector<pair<wstring,wstring>>` | `VARIANT* (2D SAFEARRAY)` | `SafeArrayCreate(VT_VARIANT, 2, bounds)` |
-
-### SAFEARRAY Constructie (FetchPageKeys)
+C# clients leverage **late binding** via `IDispatch` to interact with the COM server without requiring compiler dependencies.
 
 ```mermaid
-graph TD
-    VEC["std::vector&lt;std::wstring&gt;<br/>[key1, key2, key3]"]
-    
-    VEC --> SA["CComSafeArray&lt;VARIANT&gt;<br/>grootte = vec.size()"]
-    
-    SA --> SET["Loop: sa.SetAt(i, CComVariant(key))"]
-    
-    SET --> DETACH["var.vt = VT_ARRAY | VT_VARIANT<br/>var.parray = sa.Detach()"]
-    
-    DETACH --> MARSHAL["NDR serialisatie<br/>over LRPC"]
-    
-    MARSHAL --> CLIENT["Client ontvangt:<br/>VBScript: Array()<br/>C#: System.Array<br/>Python: tuple"]
+sequenceDiagram
+    participant CS as C# (.NET 8)
+    participant CLR as .NET CLR
+    participant RCW as Runtime Callable Wrapper
+    participant DISP as IDispatch (via RPC)
+    participant COM as CDatasetProxy
+
+    CS->>CLR: dynamic proxy = Activator.CreateInstance(...)
+    CLR->>CLR: Type.GetTypeFromProgID("ATLProjectcomserverExe.DatasetProxy")
+    CLR->>RCW: Create RCW wrapper
+    RCW->>DISP: CoCreateInstance(CLSID_DatasetProxy)
+
+    CS->>CLR: proxy.AddRow("key", "value")
+    CLR->>RCW: Dynamic call via DLR
+    RCW->>DISP: IDispatch::GetIDsOfNames("AddRow")
+    DISP-->>RCW: DISPID
+    RCW->>DISP: IDispatch::Invoke(DISPID, VARIANT[])
+    DISP->>COM: CDatasetProxy::AddRow(BSTR, BSTR)
+    COM-->>DISP: HRESULT
+    DISP-->>RCW: HRESULT
+    RCW-->>CLR: return / throw COMException
+
+    Note over CS,COM: On HRESULT failure:<br/>RCW automatically translates<br/>HRESULT + IErrorInfo → COMException
+```
+
+### Type Mapping: COM ↔ .NET
+
+```mermaid
+graph LR
+    subgraph COM_Types["COM Types"]
+        VT_BSTR["BSTR"]
+        VT_I4["LONG (VT_I4)"]
+        VT_BOOL["VARIANT_BOOL"]
+        VT_DISPATCH["IDispatch*"]
+        VT_VARIANT["VARIANT"]
+        VT_ARRAY["SAFEARRAY"]
+    end
+
+    subgraph NET_Types[".NET Types"]
+        STR["System.String"]
+        INT["System.Int32"]
+        BOOL["System.Boolean"]
+        OBJ["System.Object (dynamic)"]
+        OBJ2["System.Object"]
+        ARR["System.Array"]
+    end
+
+    VT_BSTR -->|"automatic"| STR
+    VT_I4 -->|"automatic"| INT
+    VT_BOOL -->|"automatic"| BOOL
+    VT_DISPATCH -->|"RCW wrapping"| OBJ
+    VT_VARIANT -->|"boxing"| OBJ2
+    VT_ARRAY -->|"SafeArray marshaling"| ARR
 ```
 
 ---
 
-## 12. Client Interop Strategieën
+## 12. Singleton & Lifetime Management
 
-### VBScript (IDispatch Late Binding)
-
-```mermaid
-graph LR
-    VBS["VBScript Code"] -->|"CreateObject(ProgID)"| SCM["COM SCM"]
-    SCM -->|"Lookup CLSID in Registry"| REG["HKLM\\Classes\\CLSID"]
-    REG -->|"LocalServer32 = exe pad"| START["Start EXE"]
-    START -->|"Retourneer IDispatch*"| PROXY["Proxy in cscript.exe"]
-    PROXY -->|"GetIDsOfNames + Invoke"| SERVER["COM Server"]
-```
-
-### C# .NET (RCW + Dynamic Language Runtime)
-
-```mermaid
-graph LR
-    CS["C# dynamic"] -->|"Activator.CreateInstance"| CLR[".NET CLR"]
-    CLR -->|"Type.GetTypeFromProgID"| COM["COM Interop"]
-    COM -->|"CoCreateInstance"| RCW["Runtime Callable<br/>Wrapper (RCW)"]
-    RCW -->|"IDispatch::Invoke"| PROXY["Proxy/Stub"]
-    PROXY -->|"LRPC"| SERVER["COM Server"]
-```
-
-De RCW (Runtime Callable Wrapper) is een .NET object dat de COM interface wrapt:
-- `AddRef/Release` → automatisch beheerd door .NET GC + `Marshal.ReleaseComObject`
-- `QueryInterface` → transparant via `dynamic` casting
-- `HRESULT` failure → `COMException` met IErrorInfo beschrijving
-
-### C++ (#import Smart Pointers)
-
-```mermaid
-graph LR
-    CPP["C++ Code"] -->|"#import exe"| TLHTLI[".tlh/.tli generatie"]
-    TLHTLI -->|"ISharedValuePtr"| SMART["_com_ptr_t<br/>smart pointer"]
-    SMART -->|"CreateInstance(CLSID)"| COM["CoCreateInstance"]
-    COM -->|"Direct vtable call"| PROXY["Proxy/Stub"]
-    PROXY -->|"LRPC"| SERVER["COM Server"]
-```
-
----
-
-## 13. SharedValueV2 Engine Integration
-
-Hoe de C++20 engine wordt ingezet binnen de ATL wrapper:
+`CSharedValue` is declared as a singleton via `DECLARE_CLASSFACTORY_SINGLETON`. This signifies that all clients — irrespective of their process — share the same instance.
 
 ```mermaid
 graph TB
-    subgraph ATL["ATL COM Layer"]
-        CSV["CSharedValue"]
-        CDP["CDatasetProxy"]
-        SVB["SharedValueEventBridge<br/><i>IEventListener impl</i>"]
-        CEB["ComEventBridge<br/><i>IEventListener impl</i>"]
+    subgraph Server["EXE Server Process"]
+        CF["CComClassFactorySingleton"]
+        SV["CSharedValue<br/>(1 instance)"]
+        DP["CDatasetProxy<br/>(owned by SV)"]
+
+        CF -->|"CreateInstance() → always the same"| SV
+        SV -->|"FinalConstruct() makes"| DP
     end
 
-    subgraph V2["SharedValueV2 Core"]
-        SV["SharedValue&lt;CComVariant, LocalMutexPolicy&gt;"]
-        DS["DatasetStore&lt;std::wstring, LocalMutexPolicy&gt;"]
-        EB1["EventBus (SharedValue)"]
-        EB2["EventBus (DatasetStore)"]
+    subgraph Client1["Client Process 1"]
+        P1["Proxy → ISharedValue*"]
     end
 
-    CSV -->|"m_core"| SV
-    CSV -->|"m_eventBridge"| SVB
-    CDP -->|"m_store (unique_ptr)"| DS
+    subgraph Client2["Client Process 2"]
+        P2["Proxy → ISharedValue*"]
+    end
 
-    SV -->|"GetEventBus()"| EB1
-    DS -->|"GetEventBus()"| EB2
+    subgraph Client3["Client Process 3"]
+        P3["Proxy → ISharedValue*"]
+    end
 
-    EB1 -->|"Subscribe(&bridge)"| SVB
-    EB2 -->|"Subscribe(&bridge)"| CEB
+    P1 -->|RPC| SV
+    P2 -->|RPC| SV
+    P3 -->|RPC| SV
 
-    SVB -->|"OnEvent() →<br/>converteer naar BSTR<br/>→ IEventCallback"| EC1["Client IEventCallback"]
-    CEB -->|"OnEvent() →<br/>converteer naar BSTR<br/>→ IEventCallback"| EC2["Client IEventCallback"]
-
-    CSV -.->|"implementeert<br/>ISharedValueObserver"| SV
-    SV -.->|"OnValueChanged()<br/>OnDateTimeChanged()"| CSV
-
-    style ATL fill:#e67e22,color:#fff
-    style V2 fill:#27ae60,color:#fff
+    Note over Server: All proxies refer to<br/>the exact same CSharedValue
 ```
 
-### Template Instantiaties
-
-```cpp
-// In CSharedValue — de gedeelde waarde is een VARIANT
-SharedValueV2::SharedValue<CComVariant, SharedValueV2::LocalMutexPolicy> m_core;
-
-// In CDatasetProxy — key-value pairs van wide strings
-std::unique_ptr<SharedValueV2::DatasetStore<std::wstring>> m_store;
-```
-
-De keuze voor `CComVariant` als template parameter T maakt het mogelijk om **elk COM-compatibel type** op te slaan: strings, getallen, objecten (`IDispatch*`), en zelfs geneste `DatasetProxy` instanties.
-
----
-
-## 14. Windows Registry Model
-
-Na `ATLProjectcomserver.exe /RegServer` worden de volgende registry entries geschreven:
+### ATL Lifetime References
 
 ```mermaid
 graph TD
-    subgraph HKCR["HKEY_LOCAL_MACHINE\\SOFTWARE\\Classes"]
-        subgraph ProgIDs["ProgIDs"]
-            P1["ATLProjectcomserverExe.SharedValue<br/>→ CLSID = {A5B21149...}"]
-            P2["ATLProjectcomserverExe.DatasetProxy<br/>→ CLSID = {1D85075B...}"]
-            P3["ATLProjectcomserverExe.MathOperations<br/>→ CLSID = {1CE8C512...}"]
-        end
+    WM["_tWinMain()"] -->|"Lock()"| MOD["CAtlExeModuleT<br/>m_nLockCnt = 1"]
+    SV_FC["CSharedValue::FinalConstruct()"] -->|"AddRef on DatasetProxy"| MOD
+    CLIENT["Client CoCreateInstance"] -->|"implicit Lock()"| MOD
 
-        subgraph CLSIDs["CLSID"]
-            C1["{A5B21149...}<br/>LocalServer32 = pad\\naar\\exe"]
-            C2["{1D85075B...}<br/>LocalServer32 = pad\\naar\\exe"]
-            C3["{1CE8C512...}<br/>LocalServer32 = pad\\naar\\exe"]
-        end
+    MOD -->|"m_nLockCnt > 0"| ALIVE["Server continues executing"]
+    MOD -->|"m_nLockCnt == 0"| EXIT["Message loop halts → exit"]
 
-        subgraph AppID["AppID"]
-            AI["{B0A0188F...}<br/>= ATLProjectcomserverExe"]
-        end
+    SD["ShutdownServer()"] -->|"Clear proxy + Unlock()"| MOD
 
-        subgraph TypeLib["TypeLib"]
-            TL["{B0A0188F...}\\1.0<br/>win64 = pad\\naar\\exe"]
-        end
-
-        subgraph Interfaces["Interface"]
-            I1["{8D55631F...} ISharedValue<br/>ProxyStubClsid32"]
-            I2["{50D4D0DB...} IDatasetProxy<br/>ProxyStubClsid32"]
-        end
-    end
-
-    P1 --> C1
-    P2 --> C2
-    P3 --> C3
-    C1 --> AI
-    C2 --> AI
-    C3 --> AI
-```
-
-### Registry Lookup Flow
-
-```
-Client: CreateObject("ATLProjectcomserverExe.SharedValue")
-  ↓
-HKCR\ATLProjectcomserverExe.SharedValue\CLSID → {A5B21149...}
-  ↓
-HKCR\CLSID\{A5B21149...}\LocalServer32 → "C:\...\ATLProjectcomserver.exe"
-  ↓
-SCM start EXE → CoRegisterClassObject → IClassFactory beschikbaar
-  ↓
-IClassFactory::CreateInstance() → pSharedValue (marshaled proxy)
+    style ALIVE fill:#27ae60,color:#fff
+    style EXIT fill:#e74c3c,color:#fff
 ```
 
 ---
 
-## 15. Design Patterns Samenvatting
+## 13. Design Patterns Overview
 
 ```mermaid
 mindmap
-  root((Design Patterns))
+  root((ATLProjectcomserverExe<br/>Design Patterns))
     Creational
       Singleton
-        CSharedValue
-        DECLARE_CLASSFACTORY_SINGLETON
+        CSharedValue via DECLARE_CLASSFACTORY_SINGLETON
+        One instance shared by all clients
       Factory Method
-        ATL IClassFactory
-        CreateStorageEngine()
-      Abstract Factory
-        CComClassFactory per coclass
+        ATL ClassFactory constructs COM objects
+        IClassFactory::CreateInstance
     Structural
-      Adapter
+      Adapter / Bridge
         SharedValueEventBridge
         ComEventBridge
-        COM ↔ C++ conversie
+        COM types ↔ C++ types
       Proxy
-        COM Proxy/Stub
-        .NET RCW
-        IDispatch wrapper
+        COM Proxy/Stub marshaling
+        .NET Runtime Callable Wrapper
       Facade
-        CSharedValue over SharedValueV2
-        CDatasetProxy over DatasetStore
-      Bridge
-        IStorageEngine abstractie
-        Map vs UnorderedMap
+        CSharedValue acting as facade over SharedValueV2 core
     Behavioral
       Observer
-        ISharedValueObserver
-        IDatasetObserver
-        IEventListener
-      Strategy
-        LockPolicies als template
-        StorageEngine runtime swap
+        ISharedValueObserver — legacy value changes
+        IEventListener — modern EventBus
+        Deadlock-free notification
+      Strategy / Policy
+        LockPolicies as template parameter
+        LocalMutexPolicy / NullMutexPolicy / NamedSystemMutexPolicy
       Monitor
-        Data + lock onlosmakelijk
+        Data + synchronization inextricably intertwined
         lock_guard scope blocks
       Template Method
-        ATL FinalConstruct / FinalRelease
-      Command
-        COM_METHOD_BODY macro
+        ATL FinalConstruct / FinalRelease lifecycle
     Concurrency
-      Copy then Notify
-        Observer-lijst kopiëren
-        Mutex vrij vóór callbacks
-      Lock free Counter
-        atomic sequence ID
+      Copy-then-Notify
+        Copy observer list before notification
+        Release Mutex prior to callbacks
+      Lock-free Counters
+        std::atomic for EventBus sequence IDs
 ```
 
-| Pattern | Locatie | Doel |
+| Pattern | Where Applied | Why |
 |---|---|---|
-| **Singleton** | `CSharedValue` | Gedeelde state voor alle clients |
-| **Factory Method** | `CreateStorageEngine<T>()` | Runtime keuze: map vs unordered_map |
-| **Adapter** | `SharedValueEventBridge`, `ComEventBridge` | C++ `MutationEvent` → COM `BSTR` parameters |
-| **Proxy** | COM Proxy/Stub, .NET RCW | Transparante cross-process communicatie |
-| **Facade** | `CSharedValue`, `CDatasetProxy` | Simpele COM API over complexe C++ core |
-| **Bridge** | `IStorageEngine<T>` | Ontkoppeling van API en data-structuur |
-| **Observer** | `ISharedValueObserver`, `IEventListener` | Losgekoppelde notificaties |
-| **Strategy** | `SharedValue<T, MutexPolicy>` | Verwisselbare lock-strategie |
-| **Monitor** | `SharedValue`, `DatasetStore` | Data ontoegankelijk buiten locked scope |
-| **Template Method** | ATL `FinalConstruct` / `FinalRelease` | Framework-gestuurde object lifecycle |
-| **Copy-then-Notify** | Alle observer notificaties | Deadlock-preventie |
+| **Singleton** | `CSharedValue` | All clients must share the identical state |
+| **Observer** | `ISharedValueObserver`, `EventBus` | Decoupled notifications upon state changes |
+| **Strategy / Policy** | `SharedValue<T, MutexPolicy>` | Interchangeable lock strategies without code alterations |
+| **Monitor** | `SharedValue`, `DatasetStore` | Data is inaccessible outside a locked scope |
+| **Adapter** | `SharedValueEventBridge`, `ComEventBridge` | Translation between C++ events and COM callbacks |
+| **Facade** | `CSharedValue`, `CDatasetProxy` | Streamlined COM interface atop a complex C++ engine |
+| **Proxy** | COM Proxy/Stub, .NET RCW | Transparent cross-process communication |
+| **Template Method** | ATL `FinalConstruct` / `FinalRelease` | Framework-driven object lifecycle |
+| **Copy-then-Notify** | `notifyValueChanged()`, `EventBus::Emit()` | Deadlock prevention during observer notifications |
 
+## Related Documentation
 
-## Gerelateerde Documentatie
-
-- [README.md](README.md) — Gebruikershandleiding en overzicht van de EXE COM Server variant.
-- [INSTALL.md](INSTALL.md) — Installatie-, registratie- en configuratiegids voor de EXE server.
-- [README.md](../README.md) — Hoofddocumentatie en startpunt van het gehele project.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../SharedValueV2/README.md) — Introductie en overzicht van de SharedValueV2 C++20 engine.
+- [README_EN.md](README_EN.md) — User guide and overview of the EXE COM Server variant.
+- [INSTALL_EN.md](INSTALL_EN.md) — Setup, registration, and configuration guide for the EXE server.
+- [README_EN.md](../README_EN.md) — Main documentation and starting point of the entire project.
+- [ARCHITECTURE_EN.md](../ARCHITECTURE_EN.md) — Main architecture document covering the entire COM Server project tree.
+- [README_EN.md](../SharedValueV2/README_EN.md) — Introduction and overview of the SharedValueV2 C++20 engine.

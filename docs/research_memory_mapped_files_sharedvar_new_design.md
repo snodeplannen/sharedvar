@@ -1,89 +1,89 @@
-Viewed ARCHITECTURE.md:1-800
+Viewed ARCHITECTURE_EN.md:1-800
 
-Dat is een hele goede en belangrijke architectuurvraag! 
+That is an exceptionally pertinent and crucial architectural query!
 
-Het antwoord op je eerste vraag hangt sterk af van *hoe* die oplossingen precies verbonden worden in het **huidige** ontwerp.
+The response to your initial question strongly hinges on *how* precisely these solutions are bridged within the **current** design.
 
-### Vraag 1: Wordt er dan een COM server gebruikt?
+### Question 1: Is a COM server being used then?
 
-**Kort antwoord: Ja.** In het *huidige* systeem moet de COM Server (`ATLProjectcomserverExe`) in dat scenario absoluut als "host" (knooppunt) worden gebruikt.
+**Short answer: Yes.** Within the *current* ecosystem, the COM Server (`ATLProjectcomserverExe`) must unequivocally be utilized as the "host" (node) in that scenario.
 
-**Waarom?**
-Als jouw C++ applicatie `SharedValueV2` (de C++ header-only engine) *rechtstreeks* in zijn eigen code includeert en instantieert, leeft die data volledig in het geïsoleerde geheugen van jouw C++ proces. Dit wordt in de architectuur bevestigd doordat de engine nu de `LocalMutexPolicy` (`std::mutex`) gebruikt. Een ander proces (zoals je C# applicatie) kan daar onmogelijk direct bij.
+**Why?**
+If your C++ application integrates and instantiates `SharedValueV2` (the C++ header-only engine) *directly* inside its own codebase, that data resides entirely within the isolated memory space of your C++ process. The architecture confirms this, seeing that the engine presently employs the `LocalMutexPolicy` (`std::mutex`). Another process (such as your C# application) stands completely incapable of directly reaching into that.
 
-Om data te delen in het **huidige ontwerp**, ziet het scenario er zo uit:
-1. De **COM Server** (`ATLProjectcomserverExe.exe`) is de eigenaar vande werkelijke `SharedValueV2` C++ instantie. 
-2. Jouw C++ applicatie start. Via `CoCreateInstance(...)` start hij (als eerste client) de COM Server of verbindt hij hiermee via C++ COM-interfaces. De data wordt dan *binnen de COM server* aangemaakt (bijv. via `ISharedValue::SetValue` of `IDatasetProxy::AddRow`).
-3. Daarna start de C# applicatie. Deze gebruikt `Activator.CreateInstance` naar dezelfde COM Server (het is immers een system-wide Singleton). Zo kan de C# app de data ophalen die door C++ via de server is gecreëerd.
+To facilitate data sharing under the **current design**, the scenario unfolds like this:
+1. The **COM Server** (`ATLProjectcomserverExe.exe`) claims ownership of the actual `SharedValueV2` C++ instance.
+2. Your C++ application boots. Utilizing `CoCreateInstance(...)`, it launches the COM Server (as its first client) or connects to it via C++ COM interfaces. The data is thus instantiated *inside the COM server* (e.g., via `ISharedValue::SetValue` or `IDatasetProxy::AddRow`).
+3. Subsequently, the C# application boots. It triggers `Activator.CreateInstance` targeting that exact same COM Server (as it essentially represents a system-wide Singleton). Through this, the C# app retrieves the data generated via C++ existing on the server.
 
 > [!NOTE] 
-> **Toekomstperspectief (Memory Mapped Files)**: In `ARCHITECTURE.md` (Hoofdstuk 9) staat een policy genaamd `NamedSystemMutexPolicy` omschreven als *toekomstig*. Mocht je `SharedValueV2` ooit zo ombouwen dat het direct gebruik maakt van Windows Shared Memory (Memory Mapped Files) met Named Mutexes, dan heb je technisch gezien de COM server niet meer nodig. C# zou dan wel intensief gebruik moeten maken van P/Invoke (native interop) om bij dat pure C++ geheugen te komen, wat erg ingewikkeld is (zeker met pointers, allocaties en C++ containers zoals `std::vector` en `std::wstring`). De COM server lost dit interop-probleem juist perfect op!
+> **Future Outlook (Memory Mapped Files)**: In `ARCHITECTURE_EN.md` (Chapter 9), a policy dubbed `NamedSystemMutexPolicy` is cataloged as *future*. Should you eventually refactor `SharedValueV2` to natively seize Windows Shared Memory (Memory Mapped Files) synchronized by Named Mutexes, you would technically no longer necessitate the COM server. C# would then have to rely heavily on P/Invoke (native interop) referencing that sheer C++ memory, which escalates into acute complexity (especially concerning pointers, memory allocations, and C++ containers like `std::vector` and `std::wstring`). The COM server acts as the perfect mediator eliminating this precise interop nightmare!
 
 ---
 
-### Vraag 2: Hoe maakt de C# applicatie bij voorkeur gebruik van SharedValueV2?
+### Question 2: What is the preferred mechanism for the C# application leaning into SharedValueV2?
 
-De C# applicatie praat **nooit** direct met de C++ core-engine (`SharedValueV2`), maar praat exclusief tegen de COM-laag. Hier zijn in C# twee hele typische voorkeursmanieren voor:
+The C# application **never** talks directly with the underlying C++ core engine (`SharedValueV2`); rather, it speaks exclusively up to the COM layer. Two highly typical favored methodologies surface in C# addressing this:
 
-#### 1. Late Binding (gebruikt in jullie huidige tests)
-Dit is makkelijk in het gebruik, vereist geen build-afhankelijkheden (zoals dll-imports of TypeLibs), en gebruikt de .NET `dynamic` keyword.
+#### 1. Late Binding (employed in your current test-suite)
+This is remarkably effortless to employ, demands zero build dependencies (such as dll imports or TypeLibs), and rides upon the .NET `dynamic` keyword.
 ```csharp
-// ProgID opzoeken via het Windows Register
+// Locating ProgID utilizing the Windows Registry
 Type t = Type.GetTypeFromProgID("ATLProjectcomserverExe.DatasetProxy");
 dynamic proxy = Activator.CreateInstance(t);
 
-// Aanroepen via IDispatch (over de RPC named pipe naar de C++ COM Host)
-proxy.AddRow("sensor_1", "actief");
+// Invoking via IDispatch (transversing the RPC named pipe towards the C++ COM Host)
+proxy.AddRow("sensor_1", "active");
 object dataResult;
 proxy.GetRowData("sensor_1", out dataResult); 
 ```
 
-#### 2. Early Binding (Beste performance en type-safety)
-Als het een stevige, grote C# applicatie is, ben je beter af met "Early Binding". Hierbij importeer je de COM Type Library (`.tlb` bestand geproduceerd door je project) in je .NET assembly. 
-Dit geeft je **IntelliSense**, sterke typering, en het checkt fouten al tijdens het compilen in de C# omgeving:
+#### 2. Early Binding (Top tier performance alongside type-safety)
+If navigating a hefty, expansive C# application, one fares vastly better adopting "Early Binding". Hereby you import the COM Type Library (`.tlb` file generated by your solution) directly within your .NET assembly.
+This equips you with **IntelliSense**, rigorous typing, and compiles checks catching faults straight from the C# environment:
 ```csharp
-// Via een gegenereerde Interop.ATLProjectcomserverLib
-var proxy = new DatasetProxy(); // Start de COM Server op of verbindt met de actieve instantie
-proxy.AddRow("sensor_1", "actief");
+// Executing via an auto-generated Interop.ATLProjectcomserverLib
+var proxy = new DatasetProxy(); // Fires up the COM Server or attaches to the bustling instance
+proxy.AddRow("sensor_1", "active");
 
 string dataResult;
 proxy.GetRowData("sensor_1", out dataResult);
 ```
 
-### Conclusie voor jouw scenario:
-In plaats van dat jouw C++ app direct gebruik maakt van `SharedValue<T> = new...`, treedt jouw native C++ applicatie op als een **COM Client** (gebruikmakend van de gegenereerde `_i.h` en `_i.c` C++ headers), waarbij de `ATLProjectcomserverExe` het cross-process doorgeefluik vormt naar de C# Client.
+### Conclusion for your scenario:
+Rather than your C++ app directly calling upon `SharedValue<T> = new...`, your native C++ application scales up functioning as a **COM Client** (harnessing the auto-generated `_i.h` and `_i.c` C++ headers). Through this, the `ATLProjectcomserverExe` establishes the cross-process bridge stretching down to the C# Client.
 ---
 
-Ja, het gebruik van een Out-of-Process COM server heeft absoluut impact op de snelheid vergeleken met direct in-memory (in-process) data benaderen. Snelheid is bij dit specifieke architectuur-besluit de belangrijkste afweging.
+Yes, resorting to an Out-of-Process COM server invariably exerts an impact concerning pure velocities when contrasted to executing immediate in-memory (in-process) data access. Velocity acts as the primary trade-off governing this specific architectural resolution.
 
-Hier is de technische achtergrond over wat het voor de performance betekent en hoe het project dit al oplost:
+Presented below explores the technical foundation illustrating what this enforces regarding operational performance alongside how the codebase currently addresses it:
 
-### 1. Waar zit de vertraging? (De RPC Overhead)
-Elke keer als jouw C++ of C# applicatie een functie aanroept op de COM Server (zoals `AddRow` of `GetValue`), gebeurt er "onder water" het volgende:
-1. **Context Switch & ALPC**: Je applicatie pauzeert, het OS pakt het signaal op en stuurt het naar het COM Server-proces via Advanced Local Procedure Calls (ALPC / named pipes).
-2. **Data Marshaling / Serialisatie**: Alle doorgegeven data (zoals strings en varianten) moet door de Proxy in een buffer worden gestopt en aan de ontvangende kant weer worden uitgepakt.
-3. **Uitvoering & Terugweg**: De COM server voert de code de `SharedValueV2` actie in fracties van nanoseconden uit, en het hele ALPC + Marshaling traject gebeurt *weer* in omgekeerde richting.
+### 1. Where does the lag originate? (The RPC Overhead)
+Every time your C++ or C# application fires an execution towards the COM Server (such as `AddRow` or `GetValue`), the underlying gears crank through the following sequence:
+1. **Context Switch & ALPC**: Your application stalls, the OS snipes the signal shifting it out towards the COM Server process running over Advanced Local Procedure Calls (ALPC / named pipes).
+2. **Data Marshaling / Serialization**: All relayed payloads (such as strings and generic variants) dictate the Proxy dumping them onto a transmit buffer prior to unpacking on the receiving end.
+3. **Execution & Return Journey**: The COM server fires the subsequent `SharedValueV2` logic expending mere fragments of a nanosecond, culminating in the identical ALPC + Marshaling journey rolling completely backwards.
 
-**In getallen**: 
-- Een directe C++ in-memory read: **~1 tot 5 nanoseconden**
-- Een Out-of-Process COM call (zonder payload): **~5 tot 15 microseconden** (dat is al duizenden keren langzamer, maar voor een mens onzichtbaar).
-- Een C# late-binding call (via `dynamic`) heeft nóg iets meer .NET overhead vanwege reflectie (RCW wrappers).
+**In absolute numbers**: 
+- A direct C++ in-memory read: **~1 to 5 nanoseconds**
+- An Out-of-Process COM call (omitting payloads): **~5 to 15 microseconds** (that equals a factor thousands of times slower, yet stays virtually undetectable to a human interaction flow).
+- A C# late-binding call (leaning on `dynamic`) carries a slight supplementary .NET penalty dictated by runtime reflection (RCW wrappers).
 
-### 2. Is deze impact "merkbaar" of een probleem?
-Dit hangt helemaal af van je de wensen van de software:
+### 2. Is this impact "noticeable" thus morphing into a bottleneck?
+This definitively boils down analyzing the software's overarching directives:
 
-- 🟢 **Geen enkel probleem (Configuratie, UI-updates, Events)**: Als je data 10 keer per seconde, of zelfs 1.000 keer per seconde ophaalt of update via `ISharedValue` of individuele `GetRowData`, merk je hier totaal niks van. Het OS verwerkt dit in de ruis van de achtergrondprocessen.
-- 🔴 **Absolute bottleneck (High-Frequency Trading, Video-frames, Real-time Audio)**: Als je C++ applicatie 500.000 keer per seconde kleine data-stukjes updatet (bijvoorbeeld een sensor stream), en C# probeert die telkens op te halen via individuele COM calls, dan gaat de CPU zwaar clippen op de RPC overhead. Dit is "chattiness" (te veel kleine commando's).
+- 🟢 **Zero issue whatsoever (Configurations, UI updates, Events)**: Should data flip 10 times a second, alternatively 1,000 times a second snagged via `ISharedValue` or individual `GetRowData` queries, you detect absolutely nothing amiss. The OS effortlessly absorbs it straight into background processor noise.
+- 🔴 **Absolute suffocating bottleneck (High-Frequency Trading, Video-frame streaming, Real-time Audio processing)**: Provided your C++ application hammers 500,000 micro-payload modifications every second (e.g., spanning an intense sensor feed), while C# perpetually attempts snaking those snippets traversing solitary COM calls, the CPU fundamentally clips flatlining directly spanning RPC overhead execution. This translates to "chattiness" (a debilitating surplus of microscopic chatter).
 
-### 3. Hoe lost dit project dat prestatieprobleem op? (Batching)
-Speciaal vanwege dit "chatty" RPC snelheidsverlies, is jullie `DatasetProxy` uitgerust met **Variant Arrays** en Paginering:
+### 3. How does this repository defuse said performance choke? (Batching)
+Specially aimed bypassing this "chatty" RPC velocity drop, your engineered `DatasetProxy` comes inherently fortified leveraging **Variant Arrays** alongside page-based sweeps:
 ```
 +FetchPageKeys(LONG, LONG, VARIANT*) HRESULT
 +FetchPageData(LONG, LONG, VARIANT*) HRESULT
 ```
-*Gevolg:* Als C# niet 1 variabele wil weten, maar 10.000 sensorwaarden in één klap, hoeft hij geen 10.000 enorm trage COM calls meer te maken. Je haalt met één enkele `FetchPageData` COM aanroep een grote `SAFEARRAY` in C# binnen. De RPC overhead heb je dan maar 1 keer gepakt voor 10.000 waardes! Hiermee red je de performance enorm.
+*Ramification:* Provided C# isn't merely after a lone variable, but interrogates 10,000 sensor markers at a single swoop, it drops iterating 10,000 immensely sluggish COM calls locally. Through a singular `FetchPageData` COM trigger, you haul a massive populated `SAFEARRAY` cleanly into C#. You simply inhaled the RPC penalty just once covering all 10,000 entries! You spectacularly shield performance utilizing this mechanism.
 
-### Samengevat
-**Ja, het is langzamer in microseconden.** Het is sneller dan een lokale database of WebSocket, maar duizenden  keren langzamer dan pure pointer-geheugen toegang (`SharedValueV2` local). 
+### In Summary
+**Yes, measuring purely in microseconds, it's lagging.** It triumphs a local database lookup or hitting a WebSocket effortlessly, but inevitably crawls thousands of multipliers behind unadulterated pointer memory reads (`SharedValueV2` natively local).
 
-Zolang de C++ engine geen 50.000 COM updates per seconde forceert per veldje, maar slim **batching (arrays)** combineert met lokaal cachen, zal de C# applicatie nergens last van hebben. Mocht pure nanoseconde performance een absolute projecteis zijn, dán moet het `SharedValueV2` ontwerp worden afgesplitst naar Windows Memory-Mapped Files.
+As long as the C++ engine refrains imposing 50,000 COM updates per second covering discrete fields, intelligently employing **batching (arrays)** merged alongside local cache sweeps, the C# application thrives encountering no friction whatever. If pure nanosecond performance forms an inescapable baseline architecture requirement, only then must the `SharedValueV2` blueprint branch diverging entirely into Windows Memory-Mapped Files.
