@@ -91,16 +91,16 @@ jobs:
           mkdir developer_bundle\SharedValueV5_SDK
           
           # Copy ATL components (EXE + PDB + TLB + Source generated Headers)
-          xcopy /Y ATLProjectcomserverExe\x64\Release\*.exe developer_bundle\ATLProjectcomserverExe\
-          xcopy /Y ATLProjectcomserverExe\x64\Release\*.pdb developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y x64\Release\*.exe developer_bundle\ATLProjectcomserverExe\
+          xcopy /Y x64\Release\ATLProjectcomserver.pdb developer_bundle\ATLProjectcomserverExe\
           xcopy /Y ATLProjectcomserverExe\x64\Release\*.tlb developer_bundle\ATLProjectcomserverExe\
           xcopy /Y ATLProjectcomserverExe\*_i.h developer_bundle\ATLProjectcomserverExe\
           xcopy /Y ATLProjectcomserverExe\*_i.c developer_bundle\ATLProjectcomserverExe\
           
           # Copy Legacy DLL components
-          xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.dll developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y x64\Release\*.dll developer_bundle\ATLProjectcomserverLegacy\
+          xcopy /Y x64\Release\ATLProjectcomserver.pdb developer_bundle\ATLProjectcomserverLegacy\
           xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.tlb developer_bundle\ATLProjectcomserverLegacy\
-          xcopy /Y ATLProjectcomserverLegacy\x64\Release\*.pdb developer_bundle\ATLProjectcomserverLegacy\
           xcopy /Y ATLProjectcomserverLegacy\*_i.h developer_bundle\ATLProjectcomserverLegacy\
           xcopy /Y ATLProjectcomserverLegacy\*_i.c developer_bundle\ATLProjectcomserverLegacy\
           

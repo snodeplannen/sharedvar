@@ -17,7 +17,7 @@
   <Fragment>
     <ComponentGroup Id="ComServerComponents" Directory="INSTALLFOLDER">
       <Component Id="comserver_exe" Guid="72ac2b20-1a77-4b72-9b2f-7d12f3bc8a41">
-        <File Id="exe_file" Source="..\ATLProjectcomserverExe\x64\Release\ATLProjectcomserver.exe" KeyPath="yes" />
+        <File Id="exe_file" Source="..\x64\Release\ATLProjectcomserver.exe" KeyPath="yes" />
 
         <!-- AppID Registration -->
         <RegistryKey Root="HKCR" Key="AppID\{B0A0188F-59B6-42A5-AD3A-9D3CBE079253}">
