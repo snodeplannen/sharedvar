@@ -128,13 +128,59 @@ jobs:
           
           # Zip boundaries
           Compress-Archive -Path developer_bundle\* -DestinationPath Developer_Bundle.zip
-          
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-binaries
+          path: |
+            Developer_Bundle.zip
+            SharedValueInstaller\bin\x64\Release\*.msi
+            SharedValueV5Installer\bin\x64\Release\*.msi
+
+  build_wheels:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build Python Wheels (3.10-3.13 Windows)
+        uses: pypa/cibuildwheel@v2
+        with:
+          package-dir: SharedValueV5/python_ext
+        env:
+          CIBW_BUILD: "cp310-win_amd64 cp311-win_amd64 cp312-win_amd64 cp313-win_amd64"
+
+      - name: Upload Wheel Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheels
+          path: wheelhouse/*.whl
+
+  publish_release:
+    needs: [build_release, build_wheels]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Release Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+
+      - name: Download Python Wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: python-wheels
+          path: wheels
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Developer_Bundle.zip
-            SharedValueInstaller\bin\x64\Release\*.msi
-            SharedValueV5Installer\bin\x64\Release\*.msi
+            artifacts/Developer_Bundle.zip
+            artifacts/**/*.msi
+            wheels/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

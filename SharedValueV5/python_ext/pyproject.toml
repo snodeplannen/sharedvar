@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=42", "pybind11>=2.10"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sharedvalue5"
+version = "0.4.0"
+description = "Python bindings for the SharedValueV5 IPC Engine"
+requires-python = ">=3.10"
+
+[tool.cibuildwheel]
+build = "cp310-win_amd64 cp311-win_amd64 cp312-win_amd64 cp313-win_amd64"
