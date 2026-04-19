@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$workspaceRoot = (Resolve-Path "..\").Path
+$workspaceRoot = (Resolve-Path "$PSScriptRoot\..\").Path
 $v5Root = Join-Path $workspaceRoot "SharedValueV5"
 $stagingDir = Join-Path $PSScriptRoot "staging"
 
@@ -76,6 +76,6 @@ Copy-Item "$v5Root\examples\vbs_consumer.vbs" "$stagingDir\examples\"
 Write-Host "5. Compiling WiX Toolset Installer (MSI)" -ForegroundColor Cyan
 Set-Location $PSScriptRoot
 # You must have wix installed (dotnet tool install --global wix)
-dotnet build SharedValueV5Installer.wixproj -a x64 -c Release
+dotnet build SharedValueV5Installer.wixproj -property:Platform=x64 -c Release
 
 Write-Host "Done! MSI created in bin/Release" -ForegroundColor Green

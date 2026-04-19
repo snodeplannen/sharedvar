@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - **Root Architecture Overhaul**: Refactored the core `ARCHITECTURE.md` (and NL mapping) out of legacy V2 specifications into a high-level routing document cleanly comparing all IPC generations (V2 to V5).
 - **Mermaid Visualizations**: Enriched the root `README.md` and all Architecture hubs with extensive Mermaid visualizations (decision trees, multi-channel flowcharts, sequence diagrams, memory block maps) to articulate IPC deviations.
 - **Dutch File Cleanup**: Corrected inconsistently named Dutch placeholder files (e.g., translating `implementatieplan_NL.md` to `implementation_plan_NL.md`) and purged trailing `_EN.md` hyperlink remnants.
+- **Code Quality & Ignores**: Added C++ language server ignored artifacts (`.clangd`, `compile_commands.json`) to `.gitignore`, added `[SupportedOSPlatform("windows")]` platform guard to the V5 engine, and cleaned up redundant flags in the COM wrapper event handlers.
+
+### Fixed
+- **WiX Installer Build**: Fixed the `build_sdk_installer.ps1` to correctly resolve the working directory via `$PSScriptRoot` and explicitly set the x64 architecture flag (`-property:Platform=x64`) for WiX v4 compatibility.
 
 ---
 

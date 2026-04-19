@@ -9,6 +9,10 @@ All notable changes to this project will be documented in this file.
 - **Root Architectuur Overhaul**: De overkoepelende `ARCHITECTURE.md` (en NL variant) volledig herschreven, verouderde V2 specificaties verplaatst, en omgevormd tot een universeel routing-document voor alle generaties IPC's (V2 t/m V5).
 - **Mermaid Visualisaties**: De hoofd-`README.md` en alle documentatieknooppunten voorzien van extensieve Mermaid-visualisaties (beslisbomen, dual-channel flowcharts, sequence diagrams en memory block maps) om architectonische verschillen direct visueel te verduidelijken.
 - **Opruiming & Correcties**: Inconsistent benoemde Nederlandstalige placeholder bestanden (zoals `implementatieplan_NL.md`) en oude hyperlink suffixen (`_EN.md`) opgeschoond.
+- **Codekwaliteit & Ignores**: C++ language server bestanden (`.clangd`, `compile_commands.json`) toegevoegd aan `.gitignore`, `[SupportedOSPlatform("windows")]` platform-waarschuwing toegevoegd aan de V5 engine, en redundante flag assignments in de COM wrapper event handlers opgeruimd.
+
+### Fixed
+- **WiX Installer Build**: Fout in `build_sdk_installer.ps1` opgelost door dynamische lokalisatie van mappen via `$PSScriptRoot` en expliciete toevoeging van de x64 architectuurvlag (`-property:Platform=x64`) voor WiX v4 compatibiliteit.
 
 ---
 
