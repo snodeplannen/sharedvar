@@ -62,18 +62,18 @@ To eliminate the COM bottleneck, V3 writes direct binary data (using Google Flat
 
 ```mermaid
 flowchart LR
-    subgraph Producer [Producer Process (C++)]
+    subgraph "Producer Process (C++)"
         FB[Build FlatBuffer] --> L1(Lock Named Mutex)
         L1 --> W[MemCpy into MMF]
         W --> U1(Unlock Mutex)
         U1 --> E(Set Named Event)
     end
     
-    subgraph Shared [Windows OS Kernel]
+    subgraph "Windows OS Kernel"
         MMF[(Memory-Mapped File<br/>10 MB)]
     end
     
-    subgraph Consumer [Consumer Process (C#)]
+    subgraph "Consumer Process (C#)"
         E -.->|Wakes Sleeping Thread!| R1(WaitOne Event)
         R1 --> C2(Lock Named Mutex)
         MMF -.->|Memory Pointer| R2[ReadArray from MMF]
@@ -99,18 +99,18 @@ V4 upgrades V3 by introducing a return channel. It creates a symmetrical system 
 
 ```mermaid
 graph TD
-    subgraph Host [Host Application]
+    subgraph "Host Application"
         direction TB
         HW[Write P2C]
         HR[Read C2P]
     end
 
-    subgraph Kernel [2x Memory-Mapped Files]
+    subgraph "2x Memory-Mapped Files"
         P2C[(P2C_Map<br/>Host -> Client)]
         C2P[(C2P_Map<br/>Client -> Host)]
     end
 
-    subgraph Client [Client Application]
+    subgraph "Client Application"
         direction TB
         CR[Read P2C]
         CW[Write C2P]

@@ -1,6 +1,6 @@
-# SharedValueV3_MemMap — Architectuurdocument
+# SharedValueV4 — Architectuurdocument
 
-Dit document beschrijft de volledige architectuur van de **SharedValueV3 Memory-Mapped Engine**: een ultra-snelle, cross-process communicatielaag die Windows Memory-Mapped Files combineert met Google FlatBuffers voor nanoseconde-latency data-uitwisseling tussen C++ en C# applicaties.
+Dit document beschrijft de volledige architectuur van de **SharedValueV4 Memory-Mapped Engine**: een ultra-snelle, cross-process communicatielaag die Windows Memory-Mapped Files combineert met Google FlatBuffers voor nanoseconde-latency data-uitwisseling tussen C++ en C# applicaties.
 
 ---
 
@@ -20,40 +20,44 @@ Dit document beschrijft de volledige architectuur van de **SharedValueV3 Memory-
 8. [Synchronisatiemodel](#8-synchronisatiemodel)
 9. [Exception Handling Architectuur](#9-exception-handling-architectuur)
 10. [Build Pipeline & Tooling](#10-build-pipeline--tooling)
-11. [Vergelijking met SharedValueV2 (COM)](#11-vergelijking-met-sharedvaluev2-com)
+11. [Vergelijking met SharedValueV3 (MemMap)](#11-vergelijking-met-sharedvaluev3-memmap)
 
 ---
 
 ## 1. Motivatie & Architectuurkeuze
 
-De vorige generatie (`SharedValueV2`) draait op een Out-of-Process COM Server (`LocalServer32`). Elke property-aanroep vanuit C# veroorzaakt een RPC-marshaling over Named Pipes, wat context-switches en kernel-transitions afdwingt. Voor bulk data-access (duizenden rijen per seconde) is dit een knelpunt.
+De vorige generatie (`SharedValueV3`) verving COM/RPC al door snelle gedeelde-memory communicatie. Die architectuur bleef echter primair enkelrichting (producer naar consumer) voor het hoofdpad.
 
-SharedValueV3 elimineert deze overhead door **direct geheugen te delen** tussen processen via het Windows-kernelmechanisme voor Memory-Mapped Files.
+SharedValueV4 bouwt daarop voort met **echte bidirectionele memory-mapped kanalen** plus startup-handshake signalering zodat beide kanten veilig kunnen synchroniseren vóór data-uitwisseling.
 
 ```mermaid
 flowchart LR
-    subgraph "SharedValueV2 (COM/RPC)"
-        A["C# Client"] -->|"RPC Marshaling<br/>(~μs per call)"| B["COM Server EXE"]
-        B --> C["SharedValueV2<br/>Engine (in-proc)"]
+    subgraph "SharedValueV3 (Single-Channel)"
+        A["C++ Producer"] -->|"Write<br/>(~ns)"| B["Shared Memory (P2C)"]
+        B -->|"Read<br/>(~ns)"| C["C# Consumer"]
     end
 
-    subgraph "SharedValueV3 (MemMap)"
-        D["C++ Producer"] -->|"Direct Write<br/>(~ns)"| E["Shared Memory<br/>(Windows Kernel)"]
-        E -->|"Direct Read<br/>(~ns)"| F["C# Consumer"]
+    subgraph "SharedValueV4 (Dual-Channel MemMap)"
+        D["C++ Host"] -->|"Write P2C"| E["P2C_Map"]
+        F["C# Client"] -->|"Write C2P"| G["C2P_Map"]
+        E -->|"Read P2C"| F
+        G -->|"Read C2P"| D
     end
 
     style E fill:#2d6a4f,stroke:#1b4332,color:#fff
+    style G fill:#1d3557,stroke:#0b2545,color:#fff
 ```
 
 **Kernvoordelen:**
 
-| Eigenschap | V2 (COM) | V3 (MemMap) |
+| Eigenschap | V3 (Single-Channel MemMap) | V4 (Dual-Channel MemMap) |
 |---|---|---|
-| Latency per read | ~1-10 μs (RPC) | ~10-100 ns (pointer) |
-| Serialisatie | VARIANT/BSTR marshaling | FlatBuffers zero-copy |
-| CPU bij idle | Polling of COM Events | 0% (kernel wait) |
-| Dynamische data | `std::vector`, `BSTR` | FlatBuffer tables |
-| Cross-language | COM IDL/TLB | Shared `.fbs` schema |
+| Latency per read | ~10-100 ns (pointer) | ~10-100 ns (pointer) |
+| Serialisatie | FlatBuffers zero-copy | FlatBuffers zero-copy |
+| Richting | Alleen Producer → Consumer | Volledig Host ↔ Client |
+| CPU bij idle | Event-driven sleeping threads | Event-driven sleeping threads + ready handshake |
+| Dynamische data | FlatBuffer tables | FlatBuffer tables |
+| Cross-language | Shared `.fbs` schema | Shared `.fbs` schema |
 
 ---
 
@@ -107,7 +111,7 @@ graph TB
 
 ```mermaid
 graph TD
-    ROOT["SharedValueV3_MemMap/"]
+    ROOT["SharedValueV4/"]
 
     ROOT --> SCHEMA["schema/"]
     SCHEMA --> FBS["dataset.fbs<br/><i>FlatBuffers schema definitie</i>"]
@@ -717,47 +721,47 @@ flowchart LR
 
 ---
 
-## 11. Vergelijking met SharedValueV2 (COM)
+## 11. Vergelijking met SharedValueV3 (MemMap)
 
 ```mermaid
 flowchart TB
-    subgraph "V2: COM/RPC Architectuur"
-        direction TB
-        CLIENT_V2["C# Client<br/>(COM Interop)"]
-        RPC_V2["RPC over Named Pipes<br/>(kernel transitions)"]
-        SERVER_V2["COM Server EXE<br/>(ATL/MFC)"]
-        ENGINE_V2["SharedValueV2<br/>(std::mutex, std::vector)"]
-
-        CLIENT_V2 -->|"QueryInterface /<br/>Invoke"| RPC_V2
-        RPC_V2 --> SERVER_V2
-        SERVER_V2 --> ENGINE_V2
-    end
-
-    subgraph "V3: MemMap Architectuur"
+    subgraph "V3: Single-Channel MemMap"
         direction TB
         PRODUCER_V3["C++ Producer"]
-        SHARED_V3["Shared Memory<br/>(10 MB kernel page)"]
+        SHARED_V3["P2C Shared Memory"]
         CONSUMER_V3["C# Consumer"]
 
-        PRODUCER_V3 -->|"memcpy<br/>(~ns)"| SHARED_V3
-        SHARED_V3 -->|"ReadArray<br/>(~ns)"| CONSUMER_V3
+        PRODUCER_V3 --> SHARED_V3
+        SHARED_V3 --> CONSUMER_V3
     end
 
-    style RPC_V2 fill:#e76f51,stroke:#c9302c,color:#fff
+    subgraph "V4: Dual-Channel MemMap"
+        direction TB
+        HOST_V4["C++ Host"]
+        P2C_V4["P2C_Map"]
+        CLIENT_V4["C# Client"]
+        C2P_V4["C2P_Map"]
+
+        HOST_V4 -->|"Write P2C"| P2C_V4
+        P2C_V4 -->|"Read P2C"| CLIENT_V4
+        CLIENT_V4 -->|"Write C2P"| C2P_V4
+        C2P_V4 -->|"Read C2P"| HOST_V4
+    end
+
     style SHARED_V3 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
+    style P2C_V4 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
+    style C2P_V4 fill:#1d3557,stroke:#0b2545,color:#d8f3dc
 ```
 
-| Aspect | SharedValueV2 (COM) | SharedValueV3 (MemMap) |
+| Aspect | SharedValueV3 (MemMap) | SharedValueV4 (MemMap) |
 |---|---|---|
-| **Transport** | RPC over Named Pipes | Direct shared memory |
-| **Serialisatie** | VARIANT / BSTR / SAFEARRAY | FlatBuffers (zero-copy) |
-| **Latency** | ~1-10 μs per RPC call | ~10-100 ns per read |
-| **Callbacks** | COM Connection Points (`IEventCallback`) | Named Event + C# delegate |
-| **Thread safety** | `std::mutex` (in-process only) | Named Mutex (cross-process) |
-| **Schema** | COM IDL / TypeLib (`.tlb`) | FlatBuffers `.fbs` (cross-language) |
-| **Dynamische data** | `std::vector<BSTR>` | FlatBuffer tables (onbeperkt genest) |
-| **Afhankelijkheden** | ATL, COM Runtime, Registry | Alleen Windows Kernel API |
-| **Registratie nodig** | Ja (`regsvr32` / COM Registry) | Nee (kernel objects by name) |
+| **Transport** | Enkel MMF-kanaal (P2C) | Dubbel MMF-kanaal (P2C + C2P) |
+| **Richting** | Producer → Consumer | Host ↔ Client bidirectioneel |
+| **Startup synchronisatie** | Event-driven, zonder expliciete dual-ready handshake | Expliciete Ready Event handshake in beide richtingen |
+| **Latency** | ~10-100 ns per read | ~10-100 ns per read en write in beide richtingen |
+| **Schema** | FlatBuffers `.fbs` | FlatBuffers `.fbs` (zelfde compatibiliteitsmodel) |
+| **Thread safety** | Named Mutex + Named Event | Per kanaal Named Mutex + Named Event + Ready Event |
+| **Functionele scope** | Hoge snelheid éénrichtingsstream | Volledige request/response over shared memory |
 
 ---
 
@@ -765,4 +769,4 @@ flowchart TB
 
 - [README.md](README.md) — Introductie, projectstructuur en quickstart handleiding.
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — Hoofd architectuurdocument voor het gehele COM Server project.
-- [README.md](../SharedValueV2/README.md) — SharedValueV2 C++20 engine (COM-gebaseerd).
+- [README.md](../SharedValueV3_MemMap/README.md) — SharedValueV3 baseline memory-mapped architectuur.

@@ -62,18 +62,18 @@ Om de COM bottleneck te omzeilen, schrijft V3 directe binaire data (via Google F
 
 ```mermaid
 flowchart LR
-    subgraph Producer [Producer Proces (C++)]
+    subgraph "Producer Proces (C++)"
         FB[Bouw FlatBuffer] --> L1(Lock Named Mutex)
         L1 --> W[MemCpy naar MMF]
         W --> U1(Unlock Mutex)
         U1 --> E(Set Named Event)
     end
     
-    subgraph Shared [Windows OS Kernel]
+    subgraph "Windows OS Kernel"
         MMF[(Memory-Mapped File<br/>10 MB)]
     end
     
-    subgraph Consumer [Consumer Proces (C#)]
+    subgraph "Consumer Proces (C#)"
         E -.->|Ontwaakt Thread!| R1(WaitOne Event)
         R1 --> C2(Lock Named Mutex)
         MMF -.->|Geheugen Pointer| R2[ReadArray MMF]
@@ -99,18 +99,18 @@ V4 bouwt voort op V3 door een retourkanaal te introduceren. Het creëert een sym
 
 ```mermaid
 graph TD
-    subgraph Host [Host Applicatie]
+    subgraph "Host Applicatie"
         direction TB
         HW[Write P2C]
         HR[Read C2P]
     end
 
-    subgraph Kernel [2x Memory-Mapped Files]
+    subgraph "2x Memory-Mapped Files"
         P2C[(P2C_Map<br/>Host -> Client)]
         C2P[(C2P_Map<br/>Client -> Host)]
     end
 
-    subgraph Client [Client Applicatie]
+    subgraph "Client Applicatie"
         direction TB
         CR[Read P2C]
         CW[Write C2P]

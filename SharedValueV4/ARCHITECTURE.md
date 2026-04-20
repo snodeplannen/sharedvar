@@ -1,6 +1,6 @@
-# SharedValueV3_MemMap — Architecture Document
+# SharedValueV4 — Architecture Document
 
-This document details the complete architecture spanning the **SharedValueV3 Memory-Mapped Engine**: an ultra-high speed, cross-process communication layer blending Windows Memory-Mapped Files intertwined with Google FlatBuffers driving nanosecond-latency data exchanges flanking C++ and C# applications.
+This document details the complete architecture spanning the **SharedValueV4 Memory-Mapped Engine**: an ultra-high speed, cross-process communication layer blending Windows Memory-Mapped Files intertwined with Google FlatBuffers driving nanosecond-latency data exchanges flanking C++ and C# applications.
 
 ---
 
@@ -20,40 +20,44 @@ This document details the complete architecture spanning the **SharedValueV3 Mem
 8. [Synchronization Model](#8-synchronization-model)
 9. [Exception Handling Architecture](#9-exception-handling-architecture)
 10. [Build Pipeline & Tooling](#10-build-pipeline--tooling)
-11. [Comparisons against SharedValueV2 (COM)](#11-comparisons-against-sharedvaluev2-com)
+11. [Comparisons against SharedValueV3 (MemMap)](#11-comparisons-against-sharedvaluev3-memmap)
 
 ---
 
 ## 1. Motivation & Architectural Choice
 
-The predecessor generation (`SharedValueV2`) cycles utilizing an Out-of-Process COM Server (`LocalServer32`). Any isolated property-call triggered passing through C# inflicts RPC-marshaling utilizing Named Pipes, simultaneously inducing stiff context-switches beside sharp kernel-transitions. Regarding bulk data ingestion (thousands arrays every sequence) this manifests generating intense bottlenecks.
+The predecessor generation (`SharedValueV3`) already replaced COM/RPC with high-speed shared memory. However, it was still fundamentally single-directional (producer to consumer) for the core data path.
 
-SharedValueV3 permanently eradicates overhead instances actively **injecting directly shared memory partitions** looping parallel processes anchoring onto Windows kernel Memory-Mapped File mechanisms.
+SharedValueV4 extends this model with **true bidirectional memory-mapped channels** and startup handshake signaling so both sides can coordinate safely before exchanging payloads.
 
 ```mermaid
 flowchart LR
-    subgraph "SharedValueV2 (COM/RPC)"
-        A["C# Client"] -->|"RPC Marshaling<br/>(~μs per call)"| B["COM Server EXE"]
-        B --> C["SharedValueV2<br/>Engine (in-proc)"]
+    subgraph "SharedValueV3 (Single-Channel)"
+        A["C++ Producer"] -->|"Write<br/>(~ns)"| B["Shared Memory (P2C)"]
+        B -->|"Read<br/>(~ns)"| C["C# Consumer"]
     end
 
-    subgraph "SharedValueV3 (MemMap)"
-        D["C++ Producer"] -->|"Direct Write<br/>(~ns)"| E["Shared Memory<br/>(Windows Kernel)"]
-        E -->|"Direct Read<br/>(~ns)"| F["C# Consumer"]
+    subgraph "SharedValueV4 (Dual-Channel MemMap)"
+        D["C++ Host"] -->|"Write P2C"| E["P2C_Map"]
+        F["C# Client"] -->|"Write C2P"| G["C2P_Map"]
+        E -->|"Read P2C"| F
+        G -->|"Read C2P"| D
     end
 
     style E fill:#2d6a4f,stroke:#1b4332,color:#fff
+    style G fill:#1d3557,stroke:#0b2545,color:#fff
 ```
 
 **Core Advantages:**
 
-| Property | V2 (COM) | V3 (MemMap) |
+| Property | V3 (Single-Channel MemMap) | V4 (Dual-Channel MemMap) |
 |---|---|---|
-| Latency per read | ~1-10 μs (RPC) | ~10-100 ns (pointer hop) |
-| Serialization | VARIANT/BSTR marshaling | FlatBuffers zero-copy |
-| CPU at idle | Polling mimicking COM Events | 0% (kernel wait locks) |
-| Dynamic structures | `std::vector`, `BSTR` | FlatBuffer tables |
-| Cross-language barrier | COM IDL/TLB blueprints | Shared `.fbs` schema |
+| Latency per read | ~10-100 ns (pointer hop) | ~10-100 ns (pointer hop) |
+| Serialization | FlatBuffers zero-copy | FlatBuffers zero-copy |
+| Directionality | Producer → Consumer only | Full Host ↔ Client |
+| CPU at idle | Event-driven sleeping threads | Event-driven sleeping threads + ready handshake |
+| Dynamic structures | FlatBuffer tables | FlatBuffer tables |
+| Cross-language barrier | Shared `.fbs` schema | Shared `.fbs` schema |
 
 ---
 
@@ -107,7 +111,7 @@ graph TB
 
 ```mermaid
 graph TD
-    ROOT["SharedValueV3_MemMap/"]
+    ROOT["SharedValueV4/"]
 
     ROOT --> SCHEMA["schema/"]
     SCHEMA --> FBS["dataset.fbs<br/><i>FlatBuffers schema blueprint</i>"]
@@ -716,47 +720,47 @@ flowchart LR
 
 ---
 
-## 11. Comparisons against SharedValueV2 (COM)
+## 11. Comparisons against SharedValueV3 (MemMap)
 
 ```mermaid
 flowchart TB
-    subgraph "V2: Deploying COM/RPC Architecture models explicitly"
+    subgraph "V3: Single-Channel MemMap"
         direction TB
-        CLIENT_V2["C# End-Client<br/>(Leveraging COM Interop boundaries)"]
-        RPC_V2["Executing RPC strings spanning Named Pipes<br/>(Exhaustive kernel transitions)"]
-        SERVER_V2["COM Server Process EXE<br/>(Mapping ATL/MFC arrays natively)"]
-        ENGINE_V2["SharedValueV2 Engine blocks<br/>(Locking std::mutex, mapping std::vector)"]
+        PRODUCER_V3["C++ Producer"]
+        SHARED_V3["P2C Shared Memory"]
+        CONSUMER_V3["C# Consumer"]
 
-        CLIENT_V2 -->|"Evaluates QueryInterface /<br/>Firing Invoke parameters"| RPC_V2
-        RPC_V2 --> SERVER_V2
-        SERVER_V2 --> ENGINE_V2
+        PRODUCER_V3 --> SHARED_V3
+        SHARED_V3 --> CONSUMER_V3
     end
 
-    subgraph "V3: Advanced MemMap Framework Models"
+    subgraph "V4: Dual-Channel MemMap"
         direction TB
-        PRODUCER_V3["C++ Engine Producer Node"]
-        SHARED_V3["Memory-Mapped Shared Blocks<br/>(10 MB sprawling kernel page)"]
-        CONSUMER_V3["C# Engine Consumer Node"]
+        HOST_V4["C++ Host"]
+        P2C_V4["P2C_Map"]
+        CLIENT_V4["C# Client"]
+        C2P_V4["C2P_Map"]
 
-        PRODUCER_V3 -->|"Executes lightning fast memcpy strings<br/>(~ns execution loops)"| SHARED_V3
-        SHARED_V3 -->|"Evaluating ReadArray sequences directly<br/>(~ns execution loops)"| CONSUMER_V3
+        HOST_V4 -->|"Write P2C"| P2C_V4
+        P2C_V4 -->|"Read P2C"| CLIENT_V4
+        CLIENT_V4 -->|"Write C2P"| C2P_V4
+        C2P_V4 -->|"Read C2P"| HOST_V4
     end
 
-    style RPC_V2 fill:#e76f51,stroke:#c9302c,color:#fff
     style SHARED_V3 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
+    style P2C_V4 fill:#2d6a4f,stroke:#1b4332,color:#d8f3dc
+    style C2P_V4 fill:#1d3557,stroke:#0b2545,color:#d8f3dc
 ```
 
-| Trait Aspect Matrix | SharedValueV2 Execution (COM bounds) | SharedValueV3 Operations (MemMap metrics) |
+| Trait Aspect Matrix | SharedValueV3 Operations | SharedValueV4 Operations |
 |---|---|---|
-| **Underlying transport** | Stiff RPC crossing Named Pipes | Native direct shared memory clusters |
-| **Serialization strings** | Bloated VARIANT / BSTR / SAFEARRAY | Optimized FlatBuffers (zero-copy operations) |
-| **Speed latency** | Dragging ~1-10 μs mapping each RPC traversal | Explosive ~10-100 ns parsing read operations |
-| **Notifications cascades** | Ponderous COM Connection point handling (`IEventCallback`) | Hyper-efficient Named Event parsing adjoining C# delegate handlers |
-| **Multithreading bounds** | `std::mutex` restrictions (strictly localized in-process hooks) | Expanded System Named Mutex bindings (safely mapping external cross-process operations) |
-| **Structural blueprinting** | Limiting COM IDL parameters alongside TypeLib loops (`.tlb`) | Adaptable generalized FlatBuffers configurations `.fbs` (versatile crossing diverse languages safely) |
-| **Dynamic allocations** | Cumbersome `std::vector<BSTR>` string mappings | Highly optimized nested FlatBuffer matrices (spanning inherently limitless logic layers) |
-| **Framework dependencies** | Heaving ATL loops, overlapping COM Runtimes alongside Windows Registry | Austere minimal execution bindings relying entirely executing strict Native Windows Kernel API paths |
-| **Compulsory deployment strings** | Aggressively enforced hooks navigating (`regsvr32` referencing COM mappings natively) | Extinguished cleanly bypassing registrations tracking internal isolated kernel referencing designations |
+| **Underlying transport** | Single MMF channel (P2C) | Dual MMF channels (P2C + C2P) |
+| **Directionality** | Producer → Consumer | Host ↔ Client bidirectional |
+| **Startup synchronization** | Event-driven, no explicit dual readiness handshake | Explicit Ready Event handshake for both directions |
+| **Speed latency** | ~10-100 ns reads | ~10-100 ns reads and writes both ways |
+| **Schema alignment** | FlatBuffers `.fbs` | FlatBuffers `.fbs` (same compatibility model) |
+| **Multithreading bounds** | Named Mutex + Named Event | Per-channel Named Mutex + Named Event + Ready Event |
+| **Operational scope** | High-speed broadcast/stream out | Full request/response over shared memory |
 
 ---
 
@@ -764,5 +768,4 @@ flowchart TB
 
 - [README.md](README.md) — Baseline introduction mechanics charting core structures beside quickstart execution guide procedures inherently.
 - [ARCHITECTURE.md](../ARCHITECTURE.md) — Overarching architecture document defining mapping variables tracking generalized COM Server project logic trees completely.
-- [README.md](../SharedValueV2/README.md) — Tracking foundational COM-based architecture mapping the overarching SharedValueV2 C++20 engine operations flawlessly.
-
+- [README.md](../SharedValueV3_MemMap/README.md) — SharedValueV3 baseline memory-mapped architecture.
